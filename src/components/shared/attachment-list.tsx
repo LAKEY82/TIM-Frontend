@@ -17,6 +17,9 @@ interface AttachmentListProps {
   onReject?: (message: string) => void;
 }
 
+export const isImageFile = (file: Pick<Attachment, "fileName" | "mimeType">) =>
+  file.mimeType ? file.mimeType.startsWith("image/") : /\.(png|jpe?g|gif|webp)$/i.test(file.fileName);
+
 export function AttachmentList({ attachments, onUpload, uploading, onDelete, deletingId, maxSizeMb = 25, onReject }: AttachmentListProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,7 +31,14 @@ export function AttachmentList({ attachments, onUpload, uploading, onDelete, del
         <ul className="divide-y rounded-lg border">
           {attachments.map((file) => (
             <li key={file.id} className="flex items-center gap-3 px-3 py-2">
-              <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              {isImageFile(file) ? (
+                <a href={file.url} target="_blank" rel="noopener noreferrer" className="shrink-0" tabIndex={-1} aria-hidden>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- user uploads on external storage */}
+                  <img src={file.url} alt="" className="size-10 rounded border object-cover" loading="lazy" />
+                </a>
+              ) : (
+                <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              )}
               <div className="min-w-0 flex-1">
                 <a href={file.url} target="_blank" rel="noopener noreferrer" className="block truncate text-sm font-medium hover:underline">
                   {file.fileName}

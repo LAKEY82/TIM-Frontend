@@ -132,7 +132,7 @@ The expected shape of each analytics payload is documented by its normalizer in 
 
 | Variable | Required | Example | Notes |
 |---|---|---|---|
-| `NEXT_PUBLIC_API_URL` | yes | `http://localhost:4000` | API origin, **without** `/api` or a trailing slash. Inlined at build time. |
+| `NEXT_PUBLIC_API_URL` | yes | `http://localhost:5000` | API origin, **without** `/api` or a trailing slash. Inlined at build time. |
 | `NEXT_PUBLIC_APP_NAME` | no | `Theiavora` | Display name. |
 
 Copy `.env.example` to `.env.local` and adjust.
@@ -142,9 +142,11 @@ Copy `.env.example` to `.env.local` and adjust.
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local        # point NEXT_PUBLIC_API_URL at the running Express API
+cp .env.example .env.local        # NEXT_PUBLIC_API_URL=http://localhost:5000 (the backend's default port)
 npm run dev                       # http://localhost:3000
 ```
+
+Start the backend first (`cd ../backend && npm run dev`, after `npm run seed`). Its README lists the seeded development logins.
 
 Sign in with a user from the backend seed data (for example the CEO, a PM or an employee) to see each role's dashboard.
 
@@ -191,7 +193,7 @@ The tests (`tests/`) mock `fetch` at the network boundary and cover:
 
 ## 9. Known limitations
 
-- **API contract is assumed.** The backend was not available while this was built, so the endpoints and shapes above are the frontend's contract. Mismatches should be fixed in `src/lib/services/*`.
+- **Backend.** The matching Express + MongoDB API lives in `../backend`; it implements every endpoint listed above (checked route-by-route). If its responses ever change shape, adapt `src/lib/services/*` rather than components.
 - **No real-time updates.** Notifications poll every 60 s and data refetches on window focus. There is no WebSocket or SSE yet.
 - **Project boards, calendars and timelines** load up to 500 tasks in one request instead of paginating. Very large projects would need server-side windowing.
 - **Kanban** moves cards between columns. It does not persist a manual order within a column, because no ordering field is assumed.

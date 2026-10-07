@@ -56,7 +56,7 @@ export function DailyTaskPlanner() {
   const projects = useProjects({ status: "ACTIVE", pageSize: 100, sortBy: "name", sortOrder: "asc" });
   const tasks = useTasks({ projectId, pageSize: 200, sortBy: "title", sortOrder: "asc" }, { enabled: Boolean(projectId) });
   const openTasks = useMemo(
-    () => (tasks.data?.items ?? []).filter((t) => t.status !== "APPROVED"),
+    () => (tasks.data?.items ?? []).filter((t) => t.status !== "APPROVED" && t.status !== "TESTED"),
     [tasks.data],
   );
   const assign = useAssignDailyTask();

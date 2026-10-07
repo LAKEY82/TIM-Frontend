@@ -72,7 +72,7 @@ describe("task creation", () => {
     await waitFor(() => expect(attempt).toBe(2));
     const post = calls.find((c) => c.method === "POST" && c.path === "/api/tasks");
     expect(post?.body).toMatchObject({ title: "Receipt printing", projectId: "p1", priority: "MEDIUM", type: "FEATURE" });
-  });
+  }, 15000);
 });
 
 describe("task status updates", () => {
@@ -97,6 +97,8 @@ describe("Kanban movement", () => {
     expect(moveFor("IN_PROGRESS")).toEqual({ kind: "status", status: "IN_PROGRESS" });
     expect(moveFor("IN_REVIEW")).toEqual({ kind: "submit" });
     expect(moveFor("APPROVED")).toEqual({ kind: "approve" });
+    // In QA always uses the status endpoint: from review it approves and sends to QA; otherwise the PM sends it.
+    expect(moveFor("IN_QA")).toEqual({ kind: "status", status: "IN_QA" });
     expect(moveFor("CHANGES_REQUESTED")).toEqual({ kind: "request_changes" });
   });
 

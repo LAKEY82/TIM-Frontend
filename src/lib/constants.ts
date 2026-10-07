@@ -17,52 +17,82 @@ export interface StatusMeta {
   badge: string;
   /** Solid dot/bar color. */
   dot: string;
+  /** Text/icon color for the status on its own (no badge background). */
+  ink?: string;
 }
 
 export const TASK_STATUS_META: Record<TaskStatus, StatusMeta> = {
+  WAITING: {
+    label: "Waiting",
+    badge: "border-dashed border-border bg-transparent text-muted-foreground",
+    dot: "bg-zinc-300 dark:bg-zinc-600",
+    ink: "text-muted-foreground",
+  },
   TODO: {
     label: "To do",
     badge: "bg-muted text-muted-foreground border-border",
     dot: "bg-zinc-400",
+    ink: "text-muted-foreground",
   },
   IN_PROGRESS: {
     label: "In progress",
     badge: "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300",
     dot: "bg-blue-500",
+    ink: "text-blue-600 dark:text-blue-400",
   },
   BLOCKED: {
     label: "Blocked",
     badge: "bg-red-500/10 text-red-700 border-red-500/20 dark:text-red-300",
     dot: "bg-red-500",
+    ink: "text-red-600 dark:text-red-400",
   },
   COMPLETED: {
     label: "Completed",
     badge: "bg-teal-500/10 text-teal-700 border-teal-500/20 dark:text-teal-300",
     dot: "bg-teal-500",
+    ink: "text-teal-600 dark:text-teal-400",
   },
   IN_REVIEW: {
     label: "In review",
     badge: "bg-violet-500/10 text-violet-700 border-violet-500/20 dark:text-violet-300",
     dot: "bg-violet-500",
+    ink: "text-violet-600 dark:text-violet-400",
+  },
+  IN_QA: {
+    label: "In QA",
+    badge: "bg-cyan-500/10 text-cyan-800 border-cyan-500/25 dark:text-cyan-300",
+    dot: "bg-cyan-500",
+    ink: "text-cyan-600 dark:text-cyan-400",
+  },
+  TESTED: {
+    label: "Tested",
+    badge: "bg-teal-500/10 text-teal-800 border-teal-500/25 dark:text-teal-300",
+    dot: "bg-teal-500",
+    ink: "text-teal-600 dark:text-teal-400",
   },
   CHANGES_REQUESTED: {
     label: "Changes requested",
     badge: "bg-amber-500/10 text-amber-800 border-amber-500/25 dark:text-amber-300",
     dot: "bg-amber-500",
+    ink: "text-amber-600 dark:text-amber-400",
   },
   APPROVED: {
     label: "Approved",
     badge: "bg-green-600/10 text-green-700 border-green-600/20 dark:text-green-300",
     dot: "bg-green-600",
+    ink: "text-green-600 dark:text-green-400",
   },
 };
 
 /** Kanban column order (COMPLETED is folded into the review flow). */
 export const KANBAN_COLUMNS: readonly TaskStatus[] = [
+  "WAITING",
   "TODO",
   "IN_PROGRESS",
   "BLOCKED",
   "IN_REVIEW",
+  "IN_QA",
+  "TESTED",
   "CHANGES_REQUESTED",
   "APPROVED",
 ];
@@ -92,6 +122,11 @@ export const PROJECT_STATUS_META: Record<ProjectStatus, StatusMeta> = {
     label: "Active",
     badge: "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300",
     dot: "bg-blue-500",
+  },
+  QA_TESTING: {
+    label: "QA testing",
+    badge: "bg-cyan-500/10 text-cyan-800 border-cyan-500/25 dark:text-cyan-300",
+    dot: "bg-cyan-500",
   },
   ON_HOLD: {
     label: "On hold",

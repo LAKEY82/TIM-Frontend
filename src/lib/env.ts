@@ -9,8 +9,8 @@ if (!apiUrl && process.env.NODE_ENV === "production" && typeof window !== "undef
 }
 
 export const env = {
-  /** Origin of the Express API, without the `/api` suffix. e.g. http://localhost:4000 */
-  apiUrl: apiUrl ?? "http://localhost:4000",
+  /** Origin of the Express API, without the `/api` suffix. e.g. http://localhost:5000 */
+  apiUrl: apiUrl ?? "http://localhost:5000",
   appName: process.env.NEXT_PUBLIC_APP_NAME ?? "Theiavora",
   /**
    * Preview mode: skip login and act as a local preview user, to check the UI

@@ -40,6 +40,8 @@ export const queryKeys = {
     detail: (id: ID) => ["tasks", "detail", id] as const,
     reviews: (id: ID) => ["tasks", "reviews", id] as const,
     myDay: (date: string) => ["tasks", "my-day", date] as const,
+    /** Under "tasks" so every task mutation refreshes it. */
+    workflow: (projectId: ID) => ["tasks", "workflow", projectId] as const,
   },
 
   comments: {

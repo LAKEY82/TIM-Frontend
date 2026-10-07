@@ -1,13 +1,14 @@
 "use client";
 
-import { Ban, Check, CheckCheck, Loader2, Play, RotateCcw, Send } from "lucide-react";
+import { Ban, Bug, Check, CheckCheck, Loader2, Play, RotateCcw, Send, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useApproveTask, useSubmitForReview, useUpdateTaskStatus } from "@/hooks/queries/use-tasks";
+import { useApproveTask, useQaComplete, useSubmitForReview, useUpdateTaskStatus } from "@/hooks/queries/use-tasks";
 import { ACTION_TARGET, availableActions, type TaskAction } from "@/lib/task-workflow";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import type { TaskSummary } from "@/types/domain";
+import { QaBugsDialog } from "./qa-bugs-dialog";
 import { RequestChangesDialog } from "./request-changes-dialog";
 
 const ACTION_UI: Record<TaskAction, { label: string; icon: typeof Play; variant: "default" | "outline" | "ghost" | "destructive" }> = {
@@ -18,6 +19,8 @@ const ACTION_UI: Record<TaskAction, { label: string; icon: typeof Play; variant:
   submit: { label: "Submit for review", icon: Send, variant: "default" },
   approve: { label: "Approve", icon: CheckCheck, variant: "default" },
   request_changes: { label: "Request changes", icon: RotateCcw, variant: "outline" },
+  qa_pass: { label: "QA complete", icon: ShieldCheck, variant: "default" },
+  qa_fail: { label: "Report issues", icon: Bug, variant: "destructive" },
 };
 
 interface TaskQuickActionsProps {
@@ -38,6 +41,8 @@ export function TaskQuickActions({ task, size = "sm", className, iconOnly }: Tas
   const submit = useSubmitForReview();
   const approve = useApproveTask();
   const [changesOpen, setChangesOpen] = useState(false);
+  const [bugsOpen, setBugsOpen] = useState(false);
+  const qaComplete = useQaComplete();
   const [pending, setPending] = useState<TaskAction | null>(null);
 
   const actions = availableActions(task, user);
@@ -48,10 +53,15 @@ export function TaskQuickActions({ task, size = "sm", className, iconOnly }: Tas
       setChangesOpen(true);
       return;
     }
+    if (action === "qa_fail") {
+      setBugsOpen(true);
+      return;
+    }
     setPending(action);
     try {
       if (action === "submit") await submit.mutateAsync({ id: task.id });
       else if (action === "approve") await approve.mutateAsync({ id: task.id });
+      else if (action === "qa_pass") await qaComplete.mutateAsync({ id: task.id });
       else await updateStatus.mutateAsync({ id: task.id, status: ACTION_TARGET[action] });
     } catch {
       // Error toast is raised by the global mutation handler; state was rolled back.
@@ -81,6 +91,7 @@ export function TaskQuickActions({ task, size = "sm", className, iconOnly }: Tas
           </Button>
         );
       })}
+      {actions.includes("qa_fail") ? <QaBugsDialog taskId={task.id} taskTitle={task.title} stage={task.stage} open={bugsOpen} onOpenChange={setBugsOpen} /> : null}
       {actions.includes("request_changes") ? (
         <RequestChangesDialog taskId={task.id} taskTitle={task.title} open={changesOpen} onOpenChange={setChangesOpen} />
       ) : null}

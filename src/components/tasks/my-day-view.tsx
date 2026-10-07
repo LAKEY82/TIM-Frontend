@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { useMyDay } from "@/hooks/queries/use-tasks";
 import { formatDate, formatHours, toISODate } from "@/lib/format";
+import { QaSetupSection } from "./qa-setup-section";
 import { TaskSection } from "./task-section";
 
 /**
@@ -51,6 +52,10 @@ export function MyDayView() {
         <ErrorState error={query.error} title="Unable to load your day." onRetry={() => void query.refetch()} />
       ) : day ? (
         <div className="space-y-8">
+          {isToday ? <QaSetupSection tasks={day.qaSetup} /> : null}
+          {day.qaQueue.length > 0 ? (
+            <TaskSection id="myday-qa" title="Waiting for your QA" tasks={day.qaQueue} emptyTitle="Nothing waiting for QA." />
+          ) : null}
           <TaskSection id="myday-today" title={isToday ? "Today's tasks" : "Tasks for this day"} tasks={day.today} emptyTitle="No tasks assigned for today." emptyIcon={PartyPopper} />
           <TaskSection id="myday-overdue" title="Overdue" tasks={day.overdue} emptyTitle="Nothing overdue." tone="critical" />
           <TaskSection id="myday-upcoming" title="Upcoming" tasks={day.upcoming} emptyTitle="No upcoming tasks." />

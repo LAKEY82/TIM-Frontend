@@ -5,7 +5,10 @@ import {
   Circle,
   CircleDot,
   Eye,
+  FlaskConical,
+  Hourglass,
   RotateCcw,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -14,12 +17,15 @@ import { cn } from "@/lib/utils";
 import type { TaskStatus } from "@/types/domain";
 
 export const TASK_STATUS_ICONS: Record<TaskStatus, LucideIcon> = {
+  WAITING: Hourglass,
   TODO: Circle,
   IN_PROGRESS: CircleDot,
   BLOCKED: Ban,
   COMPLETED: CheckCircle2,
   IN_REVIEW: Eye,
   CHANGES_REQUESTED: RotateCcw,
+  IN_QA: FlaskConical,
+  TESTED: ShieldCheck,
   APPROVED: CheckCheck,
 };
 

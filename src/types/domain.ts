@@ -69,6 +69,7 @@ export interface DepartmentDetail extends Department {
 export const PROJECT_STATUSES = [
   "PLANNING",
   "ACTIVE",
+  "QA_TESTING",
   "ON_HOLD",
   "AT_RISK",
   "COMPLETED",
@@ -95,6 +96,10 @@ export interface Project {
   status: ProjectStatus;
   priority: Priority;
   manager?: UserSummary | null;
+  /** QA person who tests tasks after code review. */
+  qa?: UserSummary | null;
+  /** True once the project is broken into workflow stages. */
+  workflow?: boolean;
   members: UserSummary[];
   startDate?: ISODateString | null;
   deadline?: ISODateString | null;
@@ -154,15 +159,25 @@ export interface ClientDetail extends Client {
 // ---------------------------------------------------------------------------
 
 export const TASK_STATUSES = [
+  /** A workflow stage that opens once the stage before it is approved. */
+  "WAITING",
   "TODO",
   "IN_PROGRESS",
   "BLOCKED",
   "COMPLETED",
   "IN_REVIEW",
+  /** Passed code review; the project's QA tests it and passes it or reports bugs. */
+  "IN_QA",
+  /** QA finished testing: a stage subtask that passed, or a stage whose subtasks QA has all tested. */
+  "TESTED",
   "CHANGES_REQUESTED",
   "APPROVED",
 ] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+/** Staged project workflow: Design → Frontend + Backend → QA → Bug fixing, with PM approval between stages. */
+export const WORKFLOW_STAGES = ["DESIGN", "FRONTEND", "BACKEND", "QA", "BUG_FIXING"] as const;
+export type WorkflowStage = (typeof WORKFLOW_STAGES)[number];
 
 export const TASK_TYPES = [
   "FEATURE",
@@ -186,10 +201,20 @@ export interface TaskSummary {
   type?: TaskType;
   project?: { id: ID; name: string } | null;
   milestone?: { id: ID; name: string } | null;
+  /** Set when this task is a subtask. */
+  parentId?: ID | null;
   assignee?: UserSummary | null;
   reviewer?: UserSummary | null;
+  /** QA tester: the project's QA, set when the task enters QA. */
+  qa?: UserSummary | null;
   startDate?: ISODateString | null;
   dueDate?: ISODateString | null;
+  /** When QA testing should be finished (set by the project manager). */
+  qaDueDate?: ISODateString | null;
+  /** QA's verdict on a stage subtask in the current testing round. */
+  qaResult?: "PASSED" | "BUGS" | null;
+  /** Set on a project's workflow stage tasks. */
+  stage?: WorkflowStage | null;
   estimatedHours?: number | null;
   actualHours?: number | null;
   subtaskCount?: number;
@@ -202,7 +227,24 @@ export interface Subtask {
   id: ID;
   title: string;
   status: TaskStatus;
+  priority?: Priority | null;
+  /** Set when QA reported this subtask as an issue. */
+  issueKind?: QaIssueKind | null;
   assignee?: UserSummary | null;
+}
+
+/** What QA found: each reported item becomes a subtask for the developer. */
+export const QA_ISSUE_KINDS = ["BUG", "DEFECT", "ISSUE", "UI", "PERFORMANCE", "SECURITY", "IMPROVEMENT"] as const;
+export type QaIssueKind = (typeof QA_ISSUE_KINDS)[number];
+
+/** The QA report behind an issue subtask. */
+export interface QaIssue {
+  kind: QaIssueKind;
+  steps?: string | null;
+  expected?: string | null;
+  actual?: string | null;
+  environment?: string | null;
+  reportedBy?: UserSummary | null;
 }
 
 export interface Attachment {
@@ -217,6 +259,8 @@ export interface Attachment {
 
 export interface Task extends TaskSummary {
   description?: string | null;
+  /** Present on issues QA reported. */
+  qaIssue?: QaIssue | null;
   department?: DepartmentSummary | null;
   subtasks: Subtask[];
   attachments: Attachment[];
@@ -225,7 +269,7 @@ export interface Task extends TaskSummary {
   updatedAt?: ISODateString;
 }
 
-export type ReviewDecision = "SUBMITTED" | "APPROVED" | "CHANGES_REQUESTED";
+export type ReviewDecision = "SUBMITTED" | "APPROVED" | "CHANGES_REQUESTED" | "QA_PASSED" | "QA_FAILED";
 
 export interface ReviewEntry {
   id: ID;
@@ -253,6 +297,10 @@ export interface MyDay {
   upcoming: TaskSummary[];
   inReview: TaskSummary[];
   blocked: TaskSummary[];
+  /** Tasks waiting for this user to QA them. */
+  qaQueue: TaskSummary[];
+  /** Project managers: tasks in QA that still need a tester or a QA due date. */
+  qaSetup: TaskSummary[];
 }
 
 export interface DailyTask {

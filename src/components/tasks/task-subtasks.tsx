@@ -11,12 +11,14 @@ import { usePermission } from "@/hooks/use-permission";
 import type { Task } from "@/types/domain";
 import { TaskAssignee } from "./task-assignee";
 import { TaskStatusBadge } from "./task-status-badge";
+import { QaIssueBadge } from "./qa-issue";
+import { TaskPriorityBadge } from "./task-priority-badge";
 
 export function TaskSubtasks({ task }: { task: Task }) {
   const canCreate = usePermission("tasks:create");
   const create = useCreateTask();
   const [title, setTitle] = useState("");
-  const done = task.subtasks.filter((s) => s.status === "COMPLETED" || s.status === "APPROVED").length;
+  const done = task.subtasks.filter((s) => s.status === "COMPLETED" || s.status === "TESTED" || s.status === "APPROVED").length;
 
   const add = () => {
     const value = title.trim();
@@ -45,9 +47,11 @@ export function TaskSubtasks({ task }: { task: Task }) {
           <ul className="divide-y rounded-lg border">
             {task.subtasks.map((s) => (
               <li key={s.id} className="flex items-center gap-3 px-3 py-2">
+                {s.issueKind ? <QaIssueBadge kind={s.issueKind} className="shrink-0" /> : null}
                 <Link href={`/tasks/${s.id}`} className="min-w-0 flex-1 truncate text-sm hover:underline">
                   {s.title}
                 </Link>
+                {s.issueKind && s.priority ? <TaskPriorityBadge priority={s.priority} className="hidden shrink-0 sm:inline-flex" /> : null}
                 <TaskAssignee user={s.assignee} showName={false} />
                 <TaskStatusBadge status={s.status} />
               </li>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -16,12 +16,14 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ID } from "@/types/domain";
 import { ProjectDialog } from "./project-create-modal";
+import { ProjectDeleteDialog } from "./project-delete-dialog";
+import { ProjectQaPicker, ProjectStatusPicker } from "./project-inline-pickers";
 import { ProjectProgress } from "./project-progress";
-import { ProjectStatusBadge } from "./project-status-badge";
+import { TaskBreakdownButton } from "./task-breakdown-dialog";
 
 export const PROJECT_TABS = [
   { segment: "", label: "Overview" },
-  { segment: "tasks", label: "Tasks" },
+  { segment: "tasks", label: "List" },
   { segment: "board", label: "Board" },
   { segment: "milestones", label: "Milestones" },
   { segment: "calendar", label: "Calendar" },
@@ -35,7 +37,9 @@ export const PROJECT_TABS = [
 export function ProjectHeader({ projectId }: { projectId: ID }) {
   const query = useProject(projectId);
   const canEdit = usePermission("projects:update");
+  const canDelete = usePermission("projects:delete");
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   useBreadcrumbLabel(projectId, query.data?.name);
 
   if (query.isLoading) {
@@ -55,7 +59,7 @@ export function ProjectHeader({ projectId }: { projectId: ID }) {
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{p.name}</h1>
-            <ProjectStatusBadge status={p.status} />
+            <ProjectStatusPicker project={p} />
             <TaskPriorityBadge priority={p.priority} />
           </div>
           <p className="text-sm text-muted-foreground">
@@ -74,20 +78,29 @@ export function ProjectHeader({ projectId }: { projectId: ID }) {
                 </Link>
               </>
             ) : null}
+            {" · QA "}
+            <ProjectQaPicker project={p} className="-my-1 align-middle text-sm" />
             {` · ${formatDate(p.startDate)} → ${formatDate(p.deadline)}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <TaskBreakdownButton projectId={p.id} />
           <TaskCreateButton defaults={{ projectId: p.id }} />
           {canEdit ? (
             <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil /> Edit
             </Button>
           ) : null}
+          {canDelete ? (
+            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 /> Delete
+            </Button>
+          ) : null}
         </div>
       </div>
       <ProjectProgress value={p.progress} label={`${p.completedTaskCount} of ${p.taskCount} tasks done`} className="max-w-md" />
       {canEdit ? <ProjectDialog open={editOpen} onOpenChange={setEditOpen} project={p} /> : null}
+      {canDelete ? <ProjectDeleteDialog project={p} open={deleteOpen} onOpenChange={setDeleteOpen} /> : null}
     </div>
   );
 }

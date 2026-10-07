@@ -17,8 +17,11 @@ import { useMilestones, useProject } from "@/hooks/queries/use-projects";
 import { useTasks } from "@/hooks/queries/use-tasks";
 import { formatDate, formatHours, toISODate } from "@/lib/format";
 import type { ID } from "@/types/domain";
+import { ProjectAssignments } from "./project-assignments";
+import { ProjectQaPicker, ProjectStatusPicker } from "./project-inline-pickers";
+import { ProjectWorkflow } from "./project-workflow";
 import { ProjectProgress } from "./project-progress";
-import { MilestoneStatusBadge, ProjectStatusBadge } from "./project-status-badge";
+import { MilestoneStatusBadge } from "./project-status-badge";
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -44,16 +47,20 @@ export function ProjectOverview({ projectId }: { projectId: ID }) {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
+        <ProjectWorkflow project={p} />
         <SectionCard title="Project details">
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Fact label="Client">{p.client?.name ?? "Internal"}</Fact>
             <Fact label="Status">
-              <ProjectStatusBadge status={p.status} />
+              <ProjectStatusPicker project={p} />
             </Fact>
             <Fact label="Priority">
               <TaskPriorityBadge priority={p.priority} />
             </Fact>
             <Fact label="Project manager">{p.manager?.name ?? "—"}</Fact>
+            <Fact label="QA">
+              <ProjectQaPicker project={p} className="-ml-0.5" />
+            </Fact>
             <Fact label="Start date">{formatDate(p.startDate)}</Fact>
             <Fact label="Deadline">{formatDate(p.deadline)}</Fact>
             <Fact label="Tasks">
@@ -64,6 +71,8 @@ export function ProjectOverview({ projectId }: { projectId: ID }) {
           <ProjectProgress value={p.progress} className="mt-5" />
           {p.description ? <p className="mt-4 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">{p.description}</p> : null}
         </SectionCard>
+
+        <ProjectAssignments projectId={projectId} />
 
         <SectionCard
           title="Milestones"

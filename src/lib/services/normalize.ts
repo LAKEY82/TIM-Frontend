@@ -36,6 +36,9 @@ import type {
   TaskType,
   User,
   UserSummary,
+  QaIssue,
+  QaIssueKind,
+  WorkflowStage,
   WorkloadEntry,
 } from "@/types/domain";
 import {
@@ -45,6 +48,8 @@ import {
   PROJECT_STATUSES,
   ROLES,
   TASK_STATUSES,
+  QA_ISSUE_KINDS,
+  WORKFLOW_STAGES,
   TASK_TYPES,
 } from "@/types/domain";
 
@@ -163,7 +168,7 @@ export function toUser(value: unknown): User {
     role: toRole(isRecord(obj.role) ? obj.role.name : obj.role),
     status:
       typeof status === "string"
-        ? status.toUpperCase() === "INACTIVE" || status.toUpperCase() === "DEACTIVATED"
+        ? ["INACTIVE", "DEACTIVATED", "SUSPENDED"].includes(status.toUpperCase())
           ? "INACTIVE"
           : "ACTIVE"
         : bool(isActive, true)
@@ -242,6 +247,8 @@ export function toProject(value: unknown): Project {
     status: toProjectStatus(obj.status),
     priority: toPriority(obj.priority),
     manager: toUserSummary(pick(obj, "manager", "projectManager", "project_manager", "pm")),
+    qa: toUserSummary(obj.qa),
+    workflow: bool(obj.workflow),
     members,
     startDate: optStr(pick(obj, "startDate", "start_date")),
     deadline: optStr(pick(obj, "deadline", "endDate", "end_date", "dueDate", "due_date")),
@@ -294,10 +301,15 @@ export function toTaskSummary(value: unknown): TaskSummary {
     type: obj.type !== undefined ? toTaskType(obj.type) : undefined,
     project: projectRef ?? (projectName ? { id: str(pick(obj, "projectId", "project_id")), name: projectName } : null),
     milestone: toRef(obj.milestone),
+    parentId: optStr(pick(obj, "parentId", "parent_id")) ?? (isRecord(obj.parent) ? optStr(pick(obj.parent, "id", "_id")) : optStr(obj.parent)),
     assignee: toUserSummary(pick(obj, "assignee", "assignedTo", "assigned_to")),
     reviewer: toUserSummary(obj.reviewer),
+    qa: toUserSummary(obj.qa),
     startDate: optStr(pick(obj, "startDate", "start_date")),
     dueDate: optStr(pick(obj, "dueDate", "due_date", "deadline")),
+    qaDueDate: optStr(pick(obj, "qaDueDate", "qa_due_date")),
+    qaResult: obj.qaResult === "PASSED" || obj.qaResult === "BUGS" ? obj.qaResult : null,
+    stage: (WORKFLOW_STAGES as readonly unknown[]).includes(obj.stage) ? (obj.stage as WorkflowStage) : null,
     estimatedHours: optNum(pick(obj, "estimatedHours", "estimated_hours")),
     actualHours: optNum(pick(obj, "actualHours", "actual_hours", "loggedHours")),
     subtaskCount: num(pick(obj, "subtaskCount", "subtask_count") ?? countOf(obj, "subtasks") ?? subtasks.length),
@@ -305,7 +317,7 @@ export function toTaskSummary(value: unknown): TaskSummary {
       pick(obj, "completedSubtaskCount", "completed_subtask_count") ??
         subtasks.filter((s) => {
           const st = toTaskStatus(rec(s).status);
-          return st === "COMPLETED" || st === "APPROVED";
+          return st === "COMPLETED" || st === "TESTED" || st === "APPROVED";
         }).length,
     ),
     commentCount: num(pick(obj, "commentCount", "comment_count") ?? countOf(obj, "comments")),
@@ -319,7 +331,25 @@ export function toSubtask(value: unknown): Subtask {
     id: id(pick(obj, "id", "_id")),
     title: str(pick(obj, "title", "name")),
     status: toTaskStatus(obj.status),
+    priority: obj.priority !== undefined && obj.priority !== null ? toPriority(obj.priority) : null,
+    issueKind: toQaIssueKind(obj.issueKind),
     assignee: toUserSummary(obj.assignee),
+  };
+}
+
+const toQaIssueKind = (v: unknown): QaIssueKind | null => ((QA_ISSUE_KINDS as readonly unknown[]).includes(v) ? (v as QaIssueKind) : null);
+
+function toQaIssue(value: unknown): QaIssue | null {
+  if (!isRecord(value)) return null;
+  const kind = toQaIssueKind(value.kind);
+  if (!kind) return null;
+  return {
+    kind,
+    steps: optStr(value.steps),
+    expected: optStr(value.expected),
+    actual: optStr(value.actual),
+    environment: optStr(value.environment),
+    reportedBy: toUserSummary(value.reportedBy),
   };
 }
 
@@ -341,6 +371,7 @@ export function toTask(value: unknown): Task {
   return {
     ...toTaskSummary(obj),
     description: optStr(obj.description),
+    qaIssue: toQaIssue(obj.qaIssue),
     department: toDepartmentSummary(obj.department),
     subtasks: arr(obj.subtasks).map(toSubtask),
     attachments: arr(obj.attachments).map(toAttachment),
@@ -354,7 +385,13 @@ export function toReviewEntry(value: unknown): ReviewEntry {
   const obj = rec(value);
   const raw = str(pick(obj, "decision", "status", "action", "type")).toUpperCase();
   const decision: ReviewDecision =
-    raw.includes("APPROV") ? "APPROVED" : raw.includes("CHANGE") || raw.includes("REJECT") ? "CHANGES_REQUESTED" : "SUBMITTED";
+    raw === "QA_PASSED" || raw === "QA_FAILED"
+      ? raw
+      : raw.includes("APPROV")
+        ? "APPROVED"
+        : raw.includes("CHANGE") || raw.includes("REJECT")
+          ? "CHANGES_REQUESTED"
+          : "SUBMITTED";
   return {
     id: id(pick(obj, "id", "_id")),
     decision,

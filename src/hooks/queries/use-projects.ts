@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { milestonesService, type MilestoneInput } from "@/lib/services/misc";
-import { projectsService, type ProjectFilters, type ProjectInput } from "@/lib/services/projects";
+import { projectsService, type ProjectFilters, type ProjectInput, type WorkflowPeople } from "@/lib/services/projects";
 import type { ID } from "@/types/domain";
 
 export function useProjects(filters: ProjectFilters = {}) {
@@ -19,8 +19,13 @@ export function useProject(id: ID) {
   return useQuery({ queryKey: queryKeys.projects.detail(id), queryFn: () => projectsService.get(id), enabled: Boolean(id) });
 }
 
-export function useProjectMembers(id: ID) {
-  return useQuery({ queryKey: queryKeys.projects.members(id), queryFn: () => projectsService.members(id) });
+export function useProjectMembers(id: ID | undefined) {
+  return useQuery({
+    queryKey: queryKeys.projects.members(id ?? ""),
+    queryFn: () => projectsService.members(id ?? ""),
+    enabled: Boolean(id),
+    staleTime: 60_000,
+  });
 }
 
 export function useProjectFiles(id: ID) {
@@ -50,6 +55,44 @@ export function useUpdateProject(id: ID) {
       toast.success("Project updated.");
       void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
+      // A new QA or "QA testing" status moves tasks into QA on the server.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.activity.all });
+    },
+  });
+}
+
+export function useProjectWorkflow(projectId: ID) {
+  return useQuery({ queryKey: queryKeys.tasks.workflow(projectId), queryFn: () => projectsService.workflow(projectId), enabled: Boolean(projectId) });
+}
+
+export function useSetupWorkflow(projectId: ID) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: WorkflowPeople & { qaId?: ID }) => projectsService.setupWorkflow(projectId, input),
+    meta: { silentError: true },
+    onSuccess: (stages) => {
+      queryClient.setQueryData(queryKeys.tasks.workflow(projectId), stages);
+      toast.success("Workflow created. The first stage is open.");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.activity.all });
+    },
+  });
+}
+
+/** Permanently deletes a project and everything in it. */
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: ID) => projectsService.remove(id),
+    meta: { silentError: true },
+    onSuccess: (_d, id) => {
+      queryClient.removeQueries({ queryKey: queryKeys.projects.detail(id) });
+      toast.success("Project deleted.");
+      for (const key of [queryKeys.projects.all, queryKeys.tasks.all, queryKeys.analytics.all, queryKeys.activity.all, queryKeys.notifications.all]) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
     },
   });
 }

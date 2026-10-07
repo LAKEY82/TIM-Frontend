@@ -52,11 +52,11 @@ describe("task workflow actions", () => {
     reviewer: reviewer ? { id: reviewer, name: "R" } : null,
   });
 
-  it("offers the assignee Start → Complete/Submit/Block", () => {
-    expect(availableActions(task("TODO"), me)).toEqual(["start"]);
-    expect(availableActions(task("IN_PROGRESS"), me)).toEqual(["complete", "submit", "block"]);
+  it("offers the assignee Start → Submit/Block (completing is the PM's), and Submit straight from To do", () => {
+    expect(availableActions(task("TODO"), me)).toEqual(["start", "submit"]);
+    expect(availableActions(task("IN_PROGRESS"), me)).toEqual(["submit", "block"]);
     expect(availableActions(task("BLOCKED"), me)).toEqual(["resume"]);
-    expect(availableActions(task("CHANGES_REQUESTED"), me)).toEqual(["start"]);
+    expect(availableActions(task("CHANGES_REQUESTED"), me)).toEqual(["start", "submit"]);
   });
 
   it("offers review actions only to the reviewer", () => {
@@ -66,5 +66,11 @@ describe("task workflow actions", () => {
 
   it("offers nothing on someone else's task", () => {
     expect(availableActions(task("IN_PROGRESS", "other"), me)).toEqual([]);
+  });
+
+  it("never offers a manager 'Submit for review' on someone else's task", () => {
+    const pm = { id: "pm", role: "PROJECT_MANAGER" as const };
+    expect(availableActions(task("IN_PROGRESS", "dev"), pm)).toEqual(["complete", "block"]);
+    expect(availableActions(task("TODO", "dev"), pm)).toEqual(["start"]);
   });
 });

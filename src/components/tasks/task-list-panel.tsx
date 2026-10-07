@@ -25,6 +25,8 @@ interface TaskListPanelProps {
   initialOverdue?: boolean;
   showAssigneeFilter?: boolean;
   showProject?: boolean;
+  /** Which deadline the table shows and sorts by first. */
+  deadline?: "dueDate" | "qaDueDate";
   emptyTitle?: string;
 }
 
@@ -35,6 +37,7 @@ export function TaskListPanel({
   initialOverdue = false,
   showAssigneeFilter = true,
   showProject = false,
+  deadline = "dueDate",
   emptyTitle = "No tasks match these filters.",
 }: TaskListPanelProps) {
   const [search, setSearch] = useState("");
@@ -42,7 +45,7 @@ export function TaskListPanel({
   const [priority, setPriority] = useState<Priority | null>(null);
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [overdue, setOverdue] = useState(initialOverdue);
-  const [sort, setSort] = useState<{ sortBy: TaskSortKey; sortOrder: "asc" | "desc" }>({ sortBy: "dueDate", sortOrder: "asc" });
+  const [sort, setSort] = useState<{ sortBy: TaskSortKey; sortOrder: "asc" | "desc" }>({ sortBy: deadline, sortOrder: "asc" });
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search, 300);
   const users = useUserOptions({}, showAssigneeFilter);
@@ -150,6 +153,7 @@ export function TaskListPanel({
               setPage(1);
             }}
             showProject={showProject}
+            deadline={deadline}
             emptyTitle={hasFilters ? "No tasks match these filters." : emptyTitle}
           />
           {query.data ? (

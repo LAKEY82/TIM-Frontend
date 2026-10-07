@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
-import { tasksService, type TaskFilters, type TaskInput, type TaskUpdate } from "@/lib/services/tasks";
+import { tasksService, type QaIssueInput, type TaskFilters, type TaskInput, type TaskUpdate } from "@/lib/services/tasks";
 import type { ID, MyDay, Paginated, Task, TaskStatus, TaskSummary } from "@/types/domain";
 
 export function useTasks(filters: TaskFilters, options: { enabled?: boolean } = {}) {
@@ -78,6 +78,8 @@ export function patchTaskInCaches(queryClient: QueryClient, id: ID, patch: Parti
       upcoming: map(data.upcoming),
       inReview: map(data.inReview),
       blocked: map(data.blocked),
+      qaQueue: map(data.qaQueue ?? []),
+      qaSetup: map(data.qaSetup ?? []),
     });
   }
 
@@ -108,6 +110,7 @@ export const STATUS_TOASTS: Partial<Record<TaskStatus, string>> = {
   TODO: "Task moved to To do.",
   APPROVED: "Task approved.",
   CHANGES_REQUESTED: "Changes requested.",
+  IN_QA: "Sent to QA.",
 };
 
 /**
@@ -178,7 +181,7 @@ export function useApproveTask() {
     mutationFn: ({ id, feedback }: { id: ID; feedback?: string }) => tasksService.approve(id, feedback),
     onSuccess: (task) => {
       queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
-      toast.success("Task approved.");
+      toast.success(task.status === "IN_QA" ? "Approved and sent to QA. Choose the QA tester and QA due date." : "Task approved.");
     },
     onSettled: (_d, _e, { id }) => {
       invalidateTaskViews(queryClient, id);
@@ -221,6 +224,94 @@ export function useDeleteTaskAttachment(taskId: ID) {
     onSuccess: () => {
       toast.success("File removed.");
       void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+    },
+  });
+}
+
+/**
+ * Inline edits from list rows (assignee, priority, due date, estimate).
+ * Applies `optimistic` to every cached view immediately and rolls back if the
+ * API rejects the change. Silent on success: inline edits shouldn't toast.
+ */
+export function useQuickUpdateTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: ID; input: TaskUpdate; optimistic?: Partial<TaskSummary> }) => tasksService.update(id, input),
+    onMutate: async ({ id, optimistic }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
+      return { snapshot: patchTaskInCaches(queryClient, id, optimistic ?? {}) };
+    },
+    onError: (_error, _vars, context) => restore(queryClient, context?.snapshot),
+    onSuccess: (task) => queryClient.setQueryData(queryKeys.tasks.detail(task.id), task),
+    onSettled: (_data, _error, { id }) => invalidateTaskViews(queryClient, id),
+  });
+}
+
+/** QA passed the task (it becomes Approved). */
+/** QA is done testing: issues logged this round go to the developer together, or the task passes. */
+export function useQaComplete() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }: { id: ID; note?: string }) => tasksService.qaComplete(id, note),
+    onSuccess: ({ task, openIssues }) => {
+      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
+      toast.success(
+        openIssues
+          ? `QA complete: ${openIssues} issue${openIssues === 1 ? "" : "s"} sent to ${task.stage === "QA" ? "Bug fixing" : (task.assignee?.name ?? "the developer")}.`
+          : "QA complete: passed.",
+      );
+    },
+    onSettled: (_d, _e, { id }) => {
+      invalidateTaskViews(queryClient, id);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.reviews(id) });
+    },
+  });
+}
+
+export function useQaPass() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, note }: { id: ID; note?: string }) => tasksService.qaPass(id, note),
+    onMutate: async ({ id }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.tasks.all });
+      return { snapshot: patchTaskInCaches(queryClient, id, { status: "APPROVED" }) };
+    },
+    onError: (_e, _v, context) => restore(queryClient, context?.snapshot),
+    onSuccess: (task) => {
+      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
+      toast.success("Task passed QA.");
+    },
+    onSettled: (_d, _e, { id }) => {
+      invalidateTaskViews(queryClient, id);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.reviews(id) });
+    },
+  });
+}
+
+/** QA reported bugs: bug subtasks are created and the task goes back to the developer. */
+/** QA logs issues while testing (the task stays in QA), then attaches each issue's files. */
+export function useQaReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, bugs }: { id: ID; bugs: (QaIssueInput & { files?: File[] })[] }) => {
+      const { task, bugIds } = await tasksService.qaReport(
+        id,
+        bugs.map((b) => ({ kind: b.kind, title: b.title, priority: b.priority, steps: b.steps, expected: b.expected, actual: b.actual, environment: b.environment })),
+      );
+      // Screenshots go onto each new issue. The issues exist already, so a failed upload is reported, not fatal.
+      const uploads = bugs.flatMap((b, i) => (bugIds[i] ? (b.files ?? []).map((f) => tasksService.uploadAttachment(bugIds[i]!, f)) : []));
+      const results = await Promise.allSettled(uploads);
+      return { task, failedUploads: results.filter((r) => r.status === "rejected").length };
+    },
+    meta: { silentError: true },
+    onSuccess: ({ task, failedUploads }, { bugs }) => {
+      queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
+      toast.success(`${bugs.length} issue${bugs.length === 1 ? "" : "s"} logged. Keep testing, then choose QA complete.`);
+      if (failedUploads) toast.error(`${failedUploads} attachment${failedUploads === 1 ? "" : "s"} couldn't be uploaded. Open the issue to try again.`);
+    },
+    onSettled: (_d, _e, { id }) => {
+      invalidateTaskViews(queryClient, id);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks.reviews(id) });
     },
   });
 }

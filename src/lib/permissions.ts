@@ -17,6 +17,8 @@ export const PERMISSIONS = [
   "projects:read_all",
   "projects:create",
   "projects:update",
+  /** Permanent: admins only. */
+  "projects:delete",
   "tasks:create",
   "tasks:assign",
   "tasks:review",

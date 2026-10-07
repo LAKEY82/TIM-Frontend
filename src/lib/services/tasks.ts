@@ -22,22 +22,28 @@ import type {
   Task,
   TaskStatus,
   TaskSummary,
-  TaskType,
-} from "@/types/domain";
+  TaskType, QaIssueKind } from "@/types/domain";
 
 export interface TaskFilters extends QueryParams {
+  /** Only work in review waiting for me. */
+  awaitingReview?: boolean;
+  /** With assigneeId "me": also include work waiting for my review. */
+  includeReviews?: boolean;
+  /** With assigneeId "me": also include tasks waiting for me to QA test them. */
+  includeQa?: boolean;
   search?: string;
   projectId?: ID;
   milestoneId?: ID;
   assigneeId?: ID | "me";
   reviewerId?: ID | "me";
+  qaId?: ID | "me";
   departmentId?: ID;
   status?: TaskStatus | readonly TaskStatus[];
   priority?: Priority;
   overdue?: boolean;
   dueFrom?: string;
   dueTo?: string;
-  sortBy?: "title" | "dueDate" | "priority" | "status" | "estimatedHours" | "actualHours" | "createdAt";
+  sortBy?: "title" | "dueDate" | "qaDueDate" | "priority" | "status" | "estimatedHours" | "actualHours" | "createdAt";
   sortOrder?: SortDirection;
   page?: number;
   pageSize?: number;
@@ -60,7 +66,17 @@ export interface TaskInput {
   parentId?: ID | null;
 }
 
-export type TaskUpdate = Partial<TaskInput> & { actualHours?: number | null };
+export interface QaIssueInput {
+  kind: QaIssueKind;
+  title: string;
+  priority: Priority;
+  steps?: string | null;
+  expected?: string | null;
+  actual?: string | null;
+  environment?: string | null;
+}
+
+export type TaskUpdate = Partial<TaskInput> & { actualHours?: number | null; qaDueDate?: string | null; qaId?: ID | null };
 
 export const tasksService = {
   async list(filters: TaskFilters = {}): Promise<Paginated<TaskSummary>> {
@@ -83,6 +99,24 @@ export const tasksService = {
   requestChanges: async (id: ID, feedback: string): Promise<Task> =>
     toTask(await api.post(`/api/tasks/${id}/request-changes`, { feedback })),
 
+  /** QA passed the task: it is done. */
+  qaPass: async (id: ID, note?: string): Promise<Task> => toTask(await api.post(`/api/tasks/${id}/qa/pass`, note ? { note } : {})),
+  /**
+   * QA logs issues while testing; the task stays in QA. Returns the task and the
+   * new issue ids (in the same order) for attachments.
+   */
+  async qaReport(id: ID, bugs: QaIssueInput[]): Promise<{ task: Task; bugIds: ID[] }> {
+    const data = await api.post(`/api/tasks/${id}/qa/issues`, { bugs });
+    const ids = data && typeof data === "object" && Array.isArray((data as { bugIds?: unknown }).bugIds) ? (data as { bugIds: unknown[] }).bugIds : [];
+    return { task: toTask(data), bugIds: ids.map(String) };
+  },
+  /** QA is done testing: logged issues go to the developer together; with none, the task passes. */
+  async qaComplete(id: ID, note?: string): Promise<{ task: Task; openIssues: number }> {
+    const data = await api.post(`/api/tasks/${id}/qa/complete`, note ? { note } : {});
+    const open = data && typeof data === "object" ? Number((data as { openIssues?: unknown }).openIssues ?? 0) : 0;
+    return { task: toTask(data), openIssues: Number.isFinite(open) ? open : 0 };
+  },
+
   reviews: async (id: ID): Promise<ReviewEntry[]> => toList(await api.get(`/api/tasks/${id}/reviews`), toReviewEntry),
 
   async myDay(date: string): Promise<MyDay> {
@@ -94,6 +128,8 @@ export const tasksService = {
       upcoming: arr(data.upcoming).map(toTaskSummary),
       inReview: arr(data.inReview ?? data.in_review).map(toTaskSummary),
       blocked: arr(data.blocked).map(toTaskSummary),
+      qaQueue: arr(data.qaQueue).map(toTaskSummary),
+      qaSetup: arr(data.qaSetup).map(toTaskSummary),
     };
   },
 

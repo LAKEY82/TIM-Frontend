@@ -50,6 +50,9 @@ export function EmployeeDashboard() {
             <StatCard label="Blocked" value={day.blocked.length} icon={Ban} href="/tasks?status=BLOCKED" tone={day.blocked.length > 0 ? "warning" : "default"} />
           </section>
 
+          {day.qaQueue.length > 0 ? (
+            <TaskSection id="emp-qa" title="Waiting for your QA" tasks={day.qaQueue} emptyTitle="Nothing waiting for QA." />
+          ) : null}
           <TaskSection id="emp-today" title="Today's tasks" tasks={day.today} emptyTitle="No tasks assigned for today." emptyIcon={PartyPopper} />
           <TaskSection id="emp-overdue" title="Overdue" tasks={day.overdue} emptyTitle="Nothing overdue. Nice work." tone="critical" />
           <TaskSection id="emp-review" title="In review" tasks={day.inReview} emptyTitle="Nothing waiting for review." />

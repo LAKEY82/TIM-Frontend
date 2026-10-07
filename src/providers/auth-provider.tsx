@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react";
-import { isApiError, refreshSession, setAuthFailureHandler } from "@/lib/api";
+import { isApiError, refreshSession, setAuthFailureHandler, tokenStore } from "@/lib/api";
 import { clearAuthHint, setAuthHint } from "@/lib/auth-hint";
 import { env } from "@/lib/env";
 import { previewUser } from "@/lib/preview-user";
@@ -24,11 +24,13 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Restores the session on first load: try /auth/me, and if the access token
- * is missing/expired, try one refresh (httpOnly cookie) before giving up.
+ * Restores the session on first load. The access token lives only in memory,
+ * so after a page load there is none yet: refresh first (httpOnly cookie)
+ * instead of making a /auth/me call that is certain to 401.
  */
 async function bootstrapSession(): Promise<User | null> {
   if (env.authDisabled) return previewUser();
+  if (!tokenStore.get() && !(await refreshSession())) return null;
   try {
     return await authService.me();
   } catch (error) {

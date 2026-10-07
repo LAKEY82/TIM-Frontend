@@ -29,7 +29,8 @@ import { TaskPriorityBadge } from "./task-priority-badge";
 import { TaskQuickActions } from "./task-quick-actions";
 import { TaskReviewBanner, TaskReviewHistory } from "./task-review";
 import { TaskStatusBadge } from "./task-status-badge";
-import { TaskStatusSelect } from "./task-status-select";
+import { TaskQaDueDatePicker, TaskQaPicker, TaskStatusPicker } from "./inline-pickers";
+import { QaIssueCard } from "./qa-issue";
 import { TaskSubtasks } from "./task-subtasks";
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
@@ -96,6 +97,7 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="min-w-0 space-y-6">
+          {task.qaIssue ? <QaIssueCard issue={task.qaIssue} attachments={task.attachments} /> : null}
           <SectionCard title="Description">
             {task.description ? (
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{task.description}</p>
@@ -141,7 +143,7 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
           <SectionCard title="Details">
             <dl className="divide-y">
               <DetailRow label="Status">
-                {canManage ? <TaskStatusSelect taskId={task.id} status={task.status} /> : <TaskStatusBadge status={task.status} />}
+                <TaskStatusPicker task={task} withLabel />
               </DetailRow>
               <DetailRow label="Priority">
                 <TaskPriorityBadge priority={task.priority} />
@@ -151,6 +153,12 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
               </DetailRow>
               <DetailRow label="Reviewer">
                 <TaskAssignee user={task.reviewer} emptyLabel="No reviewer" />
+              </DetailRow>
+              <DetailRow label="QA">
+                {canManage ? <TaskQaPicker task={task} showName /> : <TaskAssignee user={task.qa} emptyLabel={task.status === "IN_QA" ? "Waiting for a project QA" : "After review"} />}
+              </DetailRow>
+              <DetailRow label="QA deadline">
+                <TaskQaDueDatePicker task={task} disabled={!canManage} />
               </DetailRow>
               <DetailRow label="Project">
                 {task.project ? (

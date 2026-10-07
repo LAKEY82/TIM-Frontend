@@ -16,16 +16,19 @@ import {
 import { GripVertical } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { ErrorState } from "@/components/shared/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskAssignee } from "@/components/tasks/task-assignee";
 import { TaskDueDate } from "@/components/tasks/task-due-date";
 import { TaskPriorityBadge } from "@/components/tasks/task-priority-badge";
+import { QaBugsDialog } from "@/components/tasks/qa-bugs-dialog";
 import { RequestChangesDialog } from "@/components/tasks/request-changes-dialog";
 import { TASK_STATUS_ICONS } from "@/components/tasks/task-status-badge";
-import { useApproveTask, useSubmitForReview, useTasks, useUpdateTaskStatus } from "@/hooks/queries/use-tasks";
+import { useApproveTask, useQaComplete, useSubmitForReview, useTasks, useUpdateTaskStatus } from "@/hooks/queries/use-tasks";
 import { KANBAN_COLUMNS, TASK_STATUS_META } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
 import type { ID, TaskStatus, TaskSummary } from "@/types/domain";
 
 /**
@@ -36,6 +39,8 @@ export type BoardMove = { kind: "status"; status: TaskStatus } | { kind: "submit
 
 export function moveFor(target: TaskStatus): BoardMove {
   if (target === "IN_REVIEW") return { kind: "submit" };
+  // In QA goes through the status endpoint: from review it approves and sends to QA; otherwise the PM sends it
+  // (or a stage's subtasks) to QA.
   if (target === "APPROVED") return { kind: "approve" };
   if (target === "CHANGES_REQUESTED") return { kind: "request_changes" };
   return { kind: "status", status: target };
@@ -102,12 +107,15 @@ function BoardColumn({ status, tasks }: { status: TaskStatus; tasks: TaskSummary
 }
 
 export function ProjectBoard({ projectId }: { projectId: ID }) {
+  const { user } = useAuth();
   const query = useTasks({ projectId, pageSize: 500, sortBy: "priority", sortOrder: "desc" });
   const updateStatus = useUpdateTaskStatus();
   const submit = useSubmitForReview();
   const approve = useApproveTask();
   const [activeId, setActiveId] = useState<ID | null>(null);
   const [changesFor, setChangesFor] = useState<TaskSummary | null>(null);
+  const [bugsFor, setBugsFor] = useState<TaskSummary | null>(null);
+  const qaComplete = useQaComplete();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor));
 
@@ -138,8 +146,18 @@ export function ProjectBoard({ projectId }: { projectId: ID }) {
     const move = moveFor(target);
     // Optimistic update + rollback on failure lives in the mutation hooks.
     if (move.kind === "status") updateStatus.mutate({ id: task.id, status: move.status });
-    else if (move.kind === "submit") submit.mutate({ id: task.id });
-    else if (move.kind === "approve") approve.mutate({ id: task.id });
+    else if (move.kind === "submit") {
+      if (task.assignee?.id !== user?.id) {
+        toast.error("Only the developer assigned to this task can send it for review.");
+        return;
+      }
+      submit.mutate({ id: task.id });
+    }
+    else if (move.kind === "approve") {
+      // Dropping an In-QA card on Approved passes QA; otherwise it's a code-review approval.
+      if (task.status === "IN_QA") qaComplete.mutate({ id: task.id });
+      else approve.mutate({ id: task.id });
+    } else if (task.status === "IN_QA") setBugsFor(task); // QA reporting bugs
     else setChangesFor(task); // feedback is required before the move happens
   };
 
@@ -164,6 +182,7 @@ export function ProjectBoard({ projectId }: { projectId: ID }) {
         </div>
         <DragOverlay>{active ? <BoardCard task={active} overlay /> : null}</DragOverlay>
       </DndContext>
+      {bugsFor ? <QaBugsDialog taskId={bugsFor.id} taskTitle={bugsFor.title} stage={bugsFor.stage} open onOpenChange={(o) => !o && setBugsFor(null)} /> : null}
       {changesFor ? (
         <RequestChangesDialog taskId={changesFor.id} taskTitle={changesFor.title} open onOpenChange={(o) => !o && setChangesFor(null)} />
       ) : null}
