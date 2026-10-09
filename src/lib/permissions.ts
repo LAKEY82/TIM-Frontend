@@ -95,6 +95,8 @@ export const ROLE_LABELS: Record<Role, string> = {
   PROJECT_MANAGER: "Project Manager",
   DEPARTMENT_HEAD: "Department Head",
   EMPLOYEE: "Employee",
+  // DEVELOPER: "Developer",
+  // QA: "QA",
 };
 
 type PermissionSubject = Pick<User, "role" | "permissions"> | null | undefined;

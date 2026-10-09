@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, FolderKanban, Pencil, Timer } from "lucide-react";
+import { Bug, Clock, FolderKanban, Pencil, Timer } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -19,9 +19,10 @@ import { useDeleteTaskAttachment, useTask, useUploadTaskAttachment } from "@/hoo
 import { useCan } from "@/hooks/use-permission";
 import { TASK_TYPE_LABELS } from "@/lib/constants";
 import { formatDate, formatHours } from "@/lib/format";
-import { isAssignee } from "@/lib/task-workflow";
+import { isAssignee, isQa } from "@/lib/task-workflow";
 import { useAuth } from "@/providers/auth-provider";
-import type { ID } from "@/types/domain";
+import type { ID, TaskStatus } from "@/types/domain";
+import { BugEditDialog } from "./bug-edit-dialog";
 import { TaskAssignee } from "./task-assignee";
 import { TaskDueDate } from "./task-due-date";
 import { TaskEditDialog } from "./task-edit-dialog";
@@ -29,7 +30,8 @@ import { TaskPriorityBadge } from "./task-priority-badge";
 import { TaskQuickActions } from "./task-quick-actions";
 import { TaskReviewBanner, TaskReviewHistory } from "./task-review";
 import { TaskStatusBadge } from "./task-status-badge";
-import { TaskQaDueDatePicker, TaskQaPicker, TaskStatusPicker } from "./inline-pickers";
+import { TaskDueDatePicker, TaskQaDueDatePicker, TaskQaPicker, TaskStatusPicker } from "./inline-pickers";
+import { QaBugsDialog } from "./qa-bugs-dialog";
 import { QaIssueCard } from "./qa-issue";
 import { TaskSubtasks } from "./task-subtasks";
 
@@ -47,6 +49,9 @@ export function TaskActivity({ taskId }: { taskId: ID }) {
   return <ActivityTimeline items={activity.data} isLoading={activity.isLoading} error={activity.error} onRetry={() => void activity.refetch()} />;
 }
 
+/** Finished work QA can still report bugs on. */
+const FINISHED = ["COMPLETED", "TESTED", "APPROVED"] as const;
+
 export function TaskDetails({ taskId }: { taskId: ID }) {
   const { user } = useAuth();
   const can = useCan();
@@ -54,6 +59,7 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
   const upload = useUploadTaskAttachment(taskId);
   const removeFile = useDeleteTaskAttachment(taskId);
   const [editOpen, setEditOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   useBreadcrumbLabel(taskId, query.data?.title);
 
   if (query.isLoading) return <DetailSkeleton />;
@@ -62,6 +68,12 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
   const task = query.data;
   const canManage = can("tasks:assign");
   const mine = isAssignee(task, user);
+  // The PM, and the QA who tests a bug, set when it must be fixed by.
+  const bugQa = Boolean(task.qaIssue && user && task.qa?.id === user.id && !mine);
+  const canSetDue = canManage || bugQa;
+  // QA can still report bugs on finished work, even once the project is completed (the API checks they test this project).
+  const finished = (FINISHED as readonly TaskStatus[]).includes(task.status);
+  const canReportBugs = finished && !task.qaIssue && (!mine || task.stage === "QA") && (isQa(task, user) || Boolean(user?.isQaTester));
 
   return (
     <div className="space-y-6">
@@ -81,6 +93,15 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
               <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                 {canManage ? <Pencil /> : <Timer />}
                 {canManage ? "Edit" : "Log hours"}
+              </Button>
+            ) : bugQa ? (
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil /> Edit bug
+              </Button>
+            ) : null}
+            {canReportBugs ? (
+              <Button variant="outline" size="sm" onClick={() => setReportOpen(true)}>
+                <Bug /> Report bug
               </Button>
             ) : null}
             <TaskQuickActions task={task} />
@@ -173,7 +194,7 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
               <DetailRow label="Department">{task.department?.name ?? "—"}</DetailRow>
               <DetailRow label="Type">{task.type ? TASK_TYPE_LABELS[task.type] : "—"}</DetailRow>
               <DetailRow label="Start date">{formatDate(task.startDate)}</DetailRow>
-              <DetailRow label="Deadline">{formatDate(task.dueDate)}</DetailRow>
+              <DetailRow label={task.qaIssue ? "Fix by" : "Deadline"}>{canSetDue ? <TaskDueDatePicker task={task} /> : formatDate(task.dueDate)}</DetailRow>
               <DetailRow label="Estimated">
                 <span className="inline-flex items-center gap-1 tabular-nums">
                   <Clock className="size-3.5 text-muted-foreground" aria-hidden />
@@ -209,6 +230,10 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
       </div>
 
       {canManage || mine ? <TaskEditDialog task={task} open={editOpen} onOpenChange={setEditOpen} limited={!canManage} /> : null}
+      {canReportBugs ? (
+        <QaBugsDialog taskId={task.id} taskTitle={task.title} stage={task.stage} finished open={reportOpen} onOpenChange={setReportOpen} />
+      ) : null}
+      {bugQa && !canManage && !mine ? <BugEditDialog bugId={editOpen ? task.id : null} onOpenChange={setEditOpen} /> : null}
     </div>
   );
 }

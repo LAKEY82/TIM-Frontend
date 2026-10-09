@@ -177,6 +177,7 @@ export function toUser(value: unknown): User {
     departmentId: optStr(pick(obj, "departmentId", "department_id")) ?? department?.id ?? null,
     department,
     permissions: permissions.length ? permissions : undefined,
+    isQaTester: obj.isQaTester === true,
     createdAt: optStr(pick(obj, "createdAt", "created_at")) ?? undefined,
   };
 }
@@ -302,6 +303,8 @@ export function toTaskSummary(value: unknown): TaskSummary {
     project: projectRef ?? (projectName ? { id: str(pick(obj, "projectId", "project_id")), name: projectName } : null),
     milestone: toRef(obj.milestone),
     parentId: optStr(pick(obj, "parentId", "parent_id")) ?? (isRecord(obj.parent) ? optStr(pick(obj.parent, "id", "_id")) : optStr(obj.parent)),
+    parent: isRecord(obj.parent) ? toRef(obj.parent) : null,
+    issueKind: toQaIssueKind(obj.issueKind),
     assignee: toUserSummary(pick(obj, "assignee", "assignedTo", "assigned_to")),
     reviewer: toUserSummary(obj.reviewer),
     qa: toUserSummary(obj.qa),
@@ -333,6 +336,7 @@ export function toSubtask(value: unknown): Subtask {
     status: toTaskStatus(obj.status),
     priority: obj.priority !== undefined && obj.priority !== null ? toPriority(obj.priority) : null,
     issueKind: toQaIssueKind(obj.issueKind),
+    dueDate: optStr(pick(obj, "dueDate", "due_date")),
     assignee: toUserSummary(obj.assignee),
   };
 }

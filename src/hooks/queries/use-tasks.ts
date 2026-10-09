@@ -181,7 +181,7 @@ export function useApproveTask() {
     mutationFn: ({ id, feedback }: { id: ID; feedback?: string }) => tasksService.approve(id, feedback),
     onSuccess: (task) => {
       queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
-      toast.success(task.status === "IN_QA" ? "Approved and sent to QA. Choose the QA tester and QA due date." : "Task approved.");
+      toast.success(task.status === "IN_QA" ? "Approved and sent to QA. Choose the QA tester and QA due date." : task.issueKind ? "Fix verified. The bug is closed." : "Task approved.");
     },
     onSettled: (_d, _e, { id }) => {
       invalidateTaskViews(queryClient, id);
@@ -296,7 +296,7 @@ export function useQaReport() {
     mutationFn: async ({ id, bugs }: { id: ID; bugs: (QaIssueInput & { files?: File[] })[] }) => {
       const { task, bugIds } = await tasksService.qaReport(
         id,
-        bugs.map((b) => ({ kind: b.kind, title: b.title, priority: b.priority, steps: b.steps, expected: b.expected, actual: b.actual, environment: b.environment })),
+        bugs.map((b) => ({ kind: b.kind, title: b.title, priority: b.priority, steps: b.steps, expected: b.expected, actual: b.actual, environment: b.environment, dueDate: b.dueDate })),
       );
       // Screenshots go onto each new issue. The issues exist already, so a failed upload is reported, not fatal.
       const uploads = bugs.flatMap((b, i) => (bugIds[i] ? (b.files ?? []).map((f) => tasksService.uploadAttachment(bugIds[i]!, f)) : []));
@@ -306,7 +306,9 @@ export function useQaReport() {
     meta: { silentError: true },
     onSuccess: ({ task, failedUploads }, { bugs }) => {
       queryClient.setQueryData(queryKeys.tasks.detail(task.id), task);
-      toast.success(`${bugs.length} issue${bugs.length === 1 ? "" : "s"} logged. Keep testing, then choose QA complete.`);
+      const n = `${bugs.length} issue${bugs.length === 1 ? "" : "s"}`;
+      // On finished work there's no testing round to complete: the issues went to the developer already.
+      toast.success(task.status === "IN_QA" ? `${n} logged. Keep testing, then choose QA complete.` : `${n} sent to the developer.`);
       if (failedUploads) toast.error(`${failedUploads} attachment${failedUploads === 1 ? "" : "s"} couldn't be uploaded. Open the issue to try again.`);
     },
     onSettled: (_d, _e, { id }) => {

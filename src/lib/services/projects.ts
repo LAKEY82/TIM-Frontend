@@ -19,6 +19,8 @@ export interface ProjectFilters extends QueryParams {
   clientId?: ID;
   managerId?: ID;
   memberId?: ID;
+  /** Projects the user tests as QA. */
+  qaId?: ID | "me";
   departmentId?: ID;
   sortBy?: "name" | "deadline" | "progress" | "createdAt";
   sortOrder?: SortDirection;

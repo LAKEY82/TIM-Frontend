@@ -10,6 +10,7 @@ import { useCreateTask } from "@/hooks/queries/use-tasks";
 import { usePermission } from "@/hooks/use-permission";
 import type { Task } from "@/types/domain";
 import { TaskAssignee } from "./task-assignee";
+import { TaskDueDate } from "./task-due-date";
 import { TaskStatusBadge } from "./task-status-badge";
 import { QaIssueBadge } from "./qa-issue";
 import { TaskPriorityBadge } from "./task-priority-badge";
@@ -52,6 +53,7 @@ export function TaskSubtasks({ task }: { task: Task }) {
                   {s.title}
                 </Link>
                 {s.issueKind && s.priority ? <TaskPriorityBadge priority={s.priority} className="hidden shrink-0 sm:inline-flex" /> : null}
+                {s.dueDate ? <TaskDueDate dueDate={s.dueDate} status={s.status} className="shrink-0" /> : null}
                 <TaskAssignee user={s.assignee} showName={false} />
                 <TaskStatusBadge status={s.status} />
               </li>

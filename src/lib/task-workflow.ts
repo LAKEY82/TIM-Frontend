@@ -24,7 +24,12 @@ export function isReviewer(task: Pick<TaskSummary, "reviewer">, user: Pick<User,
   return can(user, "tasks:review");
 }
 
-type WorkflowTask = Pick<TaskSummary, "status" | "assignee" | "reviewer" | "qa"> & Pick<Partial<TaskSummary>, "stage" | "type" | "subtaskCount">;
+type WorkflowTask = Pick<TaskSummary, "status" | "assignee" | "reviewer" | "qa"> & Pick<Partial<TaskSummary>, "stage" | "type" | "subtaskCount" | "issueKind">;
+
+/** The QA tester of a bug they reported: they check the developer's fix themselves. */
+export function isBugQa(task: Pick<WorkflowTask, "qa" | "assignee"> & Pick<Partial<TaskSummary>, "issueKind">, user: Pick<User, "id"> | null): boolean {
+  return Boolean(user && task.issueKind && task.qa?.id === user.id && !isAssignee(task, user));
+}
 
 /** A Design / Frontend / Backend stage broken into subtasks: its status follows them. */
 export function isRollupStage(task: Pick<Partial<TaskSummary>, "stage" | "subtaskCount">): boolean {
@@ -59,7 +64,7 @@ export function availableActions(task: WorkflowTask, user: Pick<User, "id" | "ro
         break;
     }
   }
-  if (task.status === "IN_REVIEW" && isReviewer(task, user) && !isRollupStage(task)) {
+  if (task.status === "IN_REVIEW" && (isReviewer(task, user) || isBugQa(task, user)) && !isRollupStage(task)) {
     actions.push("approve", "request_changes");
   }
   // A stage QA has finished testing is approved by the project manager, which opens the next stage.
@@ -107,7 +112,7 @@ export function statusOptions(task: WorkflowTask, user: Pick<User, "id" | "role"
   if (isAssignee(task, user) && !isRollupStage(task)) for (const s of ASSIGNEE_MOVES[task.status] ?? []) options.add(s);
   // Developers tick off each bug QA reported on their work.
   if (isAssignee(task, user) && task.type === "BUG" && (task.status === "TODO" || task.status === "IN_PROGRESS")) options.add("COMPLETED");
-  if (task.status === "IN_REVIEW" && isReviewer(task, user)) {
+  if (task.status === "IN_REVIEW" && (isReviewer(task, user) || isBugQa(task, user))) {
     options.add("APPROVED");
     options.add("CHANGES_REQUESTED");
   }

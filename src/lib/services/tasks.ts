@@ -31,6 +31,8 @@ export interface TaskFilters extends QueryParams {
   includeReviews?: boolean;
   /** With assigneeId "me": also include tasks waiting for me to QA test them. */
   includeQa?: boolean;
+  /** "My bugs": issues I test or reported as QA. */
+  qaBugs?: boolean;
   search?: string;
   projectId?: ID;
   milestoneId?: ID;
@@ -74,9 +76,17 @@ export interface QaIssueInput {
   expected?: string | null;
   actual?: string | null;
   environment?: string | null;
+  /** When the developer should have it fixed (yyyy-MM-dd). */
+  dueDate?: string | null;
 }
 
-export type TaskUpdate = Partial<TaskInput> & { actualHours?: number | null; qaDueDate?: string | null; qaId?: ID | null };
+export type TaskUpdate = Partial<TaskInput> & {
+  actualHours?: number | null;
+  qaDueDate?: string | null;
+  qaId?: ID | null;
+  /** Edits to a bug's QA report. */
+  qaIssue?: Partial<Pick<QaIssueInput, "kind" | "steps" | "expected" | "actual" | "environment">>;
+};
 
 export const tasksService = {
   async list(filters: TaskFilters = {}): Promise<Paginated<TaskSummary>> {

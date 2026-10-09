@@ -20,6 +20,8 @@ export const ROLES = [
   "PROJECT_MANAGER",
   "DEPARTMENT_HEAD",
   "EMPLOYEE",
+  // "DEVELOPER",
+  // "QA",
 ] as const;
 export type Role = (typeof ROLES)[number];
 
@@ -42,6 +44,8 @@ export interface User extends UserSummary {
   department?: DepartmentSummary | null;
   /** Optional explicit permission list from the backend. */
   permissions?: string[];
+  /** Tests work as QA somewhere (a project's QA or a task's tester): shows "My bugs". */
+  isQaTester?: boolean;
   createdAt?: ISODateString;
 }
 
@@ -203,6 +207,10 @@ export interface TaskSummary {
   milestone?: { id: ID; name: string } | null;
   /** Set when this task is a subtask. */
   parentId?: ID | null;
+  /** The parent task's title, where a list includes it (My bugs). */
+  parent?: { id: ID; name: string } | null;
+  /** Set when QA reported this task as an issue. */
+  issueKind?: QaIssueKind | null;
   assignee?: UserSummary | null;
   reviewer?: UserSummary | null;
   /** QA tester: the project's QA, set when the task enters QA. */
@@ -230,6 +238,7 @@ export interface Subtask {
   priority?: Priority | null;
   /** Set when QA reported this subtask as an issue. */
   issueKind?: QaIssueKind | null;
+  dueDate?: ISODateString | null;
   assignee?: UserSummary | null;
 }
 

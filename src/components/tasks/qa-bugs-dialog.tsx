@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronRight, ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { FormError } from "@/components/forms/form-field";
-import { PrioritySelect } from "@/components/tasks/inline-pickers";
+import { DueDateSelect, PrioritySelect } from "@/components/tasks/inline-pickers";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,8 @@ interface IssueRow {
   kind: QaIssueKind;
   title: string;
   priority: Priority;
+  /** Fix-by date (yyyy-MM-dd), or null. */
+  dueDate: string | null;
   steps: string;
   expected: string;
   actual: string;
@@ -41,6 +43,7 @@ const newIssue = (environment = ""): IssueRow => ({
   kind: "BUG",
   title: "",
   priority: "HIGH",
+  dueDate: null,
   steps: "",
   expected: "",
   actual: "",
@@ -72,6 +75,8 @@ interface QaBugsDialogProps {
   taskTitle: string;
   /** The workflow's QA stage sends issues to the Bug fixing stage. */
   stage?: WorkflowStage | null;
+  /** The task is finished (even its project may be): issues go to the developer straight away. */
+  finished?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -82,7 +87,7 @@ interface QaBugsDialogProps {
  * screenshots. Each becomes a subtask for the developer, and the task goes
  * back to them.
  */
-export function QaBugsDialog({ taskId, taskTitle, stage, open, onOpenChange }: QaBugsDialogProps) {
+export function QaBugsDialog({ taskId, taskTitle, stage, finished = false, open, onOpenChange }: QaBugsDialogProps) {
   const fail = useQaReport();
   // The environment starts from the tester's own browser.
   const [issues, setIssues] = useState<IssueRow[]>(() => [newIssue(browserEnvironment())]);
@@ -109,6 +114,7 @@ export function QaBugsDialog({ taskId, taskTitle, stage, open, onOpenChange }: Q
           kind: b.kind,
           title: b.title.trim(),
           priority: b.priority,
+          dueDate: b.dueDate,
           steps: b.steps.trim() || null,
           expected: b.expected.trim() || null,
           actual: b.actual.trim() || null,
@@ -136,9 +142,18 @@ export function QaBugsDialog({ taskId, taskTitle, stage, open, onOpenChange }: Q
         <DialogHeader>
           <DialogTitle>Report issues</DialogTitle>
           <DialogDescription>
-            Log what you found and keep testing <span className="font-medium text-foreground">{taskTitle}</span>: you can report more at any time. When
-            you&apos;re done, choose <span className="font-medium text-foreground">QA complete</span> and everything you logged goes to{" "}
-            {stage === "QA" ? "the Bug fixing stage" : "the developer"} together.
+            {finished ? (
+              <>
+                <span className="font-medium text-foreground">{taskTitle}</span> is already finished. Each issue you report goes to{" "}
+                {stage === "QA" ? "the Bug fixing stage" : "its developer"} straight away, and the project manager is told.
+              </>
+            ) : (
+              <>
+                Log what you found and keep testing <span className="font-medium text-foreground">{taskTitle}</span>: you can report more at any time. When
+                you&apos;re done, choose <span className="font-medium text-foreground">QA complete</span> and everything you logged goes to{" "}
+                {stage === "QA" ? "the Bug fixing stage" : "the developer"} together.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -246,6 +261,10 @@ function IssueCard({
           className="min-w-48 flex-1"
         />
         <PrioritySelect value={issue.priority} onChange={(priority) => onChange({ priority })} />
+        <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+          Fix by
+          <DueDateSelect value={issue.dueDate} onChange={(dueDate) => onChange({ dueDate })} label={`issue ${n} fix-by date`} />
+        </span>
         <Button type="button" variant="ghost" size="icon-sm" aria-label={issue.open ? `Collapse issue ${n}` : `Expand issue ${n}`} onClick={() => onChange({ open: !issue.open })}>
           {issue.open ? <ChevronDown /> : <ChevronRight />}
         </Button>

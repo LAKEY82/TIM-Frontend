@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bell,
+  Bug,
   Briefcase,
   Building2,
   CalendarDays,
@@ -17,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
+import type { User } from "@/types/domain";
 
 export interface NavItem {
   label: string;
@@ -24,6 +26,8 @@ export interface NavItem {
   icon: LucideIcon;
   /** Any of these permissions shows the item. Omit for everyone. */
   permissions?: readonly Permission[];
+  /** Shows the item only when this holds for the signed-in user (for things no permission describes). */
+  when?: (user: User) => boolean;
   /** Extra path prefixes that should mark the item active. */
   match?: readonly string[];
   exact?: boolean;
@@ -63,6 +67,11 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Departments", href: "/settings/departments", icon: Building2, permissions: ["departments:manage"] },
       { label: "Settings", href: "/settings/profile", icon: Settings, match: ["/settings/profile", "/settings/company", "/settings/notifications", "/settings/appearance"] },
     ],
+  },
+  {
+    label: "QA",
+    // Anyone can be a project's QA, so this follows what the user tests, not their role.
+    items: [{ label: "My Bugs", href: "/my-bugs", icon: Bug, when: (user) => Boolean(user.isQaTester) }],
   },
 ];
 

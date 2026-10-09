@@ -15,6 +15,7 @@ import {
 const STATIC_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   "my-day": "My Day",
+  "my-bugs": "My Bugs",
   tasks: "Tasks",
   "daily-tasks": "Daily Tasks",
   projects: "Projects",

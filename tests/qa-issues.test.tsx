@@ -52,6 +52,7 @@ describe("QA issue reporting", () => {
           expected: "Validation error",
           actual: "Signs in",
           environment: "Chrome 129 · staging",
+          dueDate: null,
         },
       ],
     });

@@ -6,18 +6,20 @@ import { useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUnreadCount } from "@/hooks/queries/use-misc";
 import { useCan } from "@/hooks/use-permission";
+import { useAuth } from "@/providers/auth-provider";
 import { cn } from "@/lib/utils";
 import { isNavItemActive, NAV_SECTIONS, type NavSection } from "./nav-config";
 
 function useVisibleSections(): NavSection[] {
   const can = useCan();
+  const { user } = useAuth();
   return useMemo(
     () =>
       NAV_SECTIONS.map((section) => ({
         ...section,
-        items: section.items.filter((item) => !item.permissions || can(item.permissions, "any")),
+        items: section.items.filter((item) => (!item.permissions || can(item.permissions, "any")) && (!item.when || (user ? item.when(user) : false))),
       })).filter((section) => section.items.length > 0),
-    [can],
+    [can, user],
   );
 }
 
