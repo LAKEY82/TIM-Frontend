@@ -47,7 +47,7 @@ export function MyTasksView() {
     scope === "mine"
       ? canReview
         ? { ...COPY.mine, description: "Tasks assigned to you, plus work waiting for your review or QA testing.", empty: "Nothing assigned to you or waiting for you." }
-        : { ...COPY.mine, description: "Tasks assigned to you, plus tasks waiting for your QA testing.", empty: "Nothing assigned to you or waiting for your QA." }
+        : { ...COPY.mine, description: "Tasks assigned to you, plus work you QA test (it stays here with its bugs until it passes).", empty: "Nothing assigned to you or waiting for your QA." }
       : COPY[scope];
 
   return (
@@ -78,8 +78,6 @@ export function MyTasksView() {
         // Remount when scope or deep-link filters change so initial state applies.
         key={`${scope}-${initialStatus ?? ""}-${initialOverdue}`}
         baseFilters={baseFilters}
-        // "Mine" includes other people's work waiting on you, so it can be filtered by developer.
-        showAssigneeFilter
         initialStatus={initialStatus}
         initialOverdue={initialOverdue}
         showProject

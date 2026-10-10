@@ -3,6 +3,7 @@
 import {
   AlarmClock,
   AtSign,
+  CalendarClock,
   CheckCircle2,
   Eye,
   FolderKanban,
@@ -25,6 +26,7 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   DEADLINE_APPROACHING: AlarmClock,
   MENTION: AtSign,
   PROJECT_UPDATE: FolderKanban,
+  MEETING_INVITE: CalendarClock,
 };
 
 interface NotificationItemProps {

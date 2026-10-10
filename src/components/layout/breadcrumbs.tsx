@@ -16,6 +16,7 @@ const STATIC_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   "my-day": "My Day",
   "my-bugs": "My Bugs",
+  meetings: "Meetings",
   tasks: "Tasks",
   "daily-tasks": "Daily Tasks",
   projects: "Projects",

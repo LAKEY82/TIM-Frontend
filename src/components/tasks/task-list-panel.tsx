@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useUserOptions } from "@/hooks/queries/use-people";
+import { useProjects } from "@/hooks/queries/use-projects";
 import { useTasks } from "@/hooks/queries/use-tasks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { DEFAULT_PAGE_SIZE, PRIORITY_META, TASK_STATUS_META } from "@/lib/constants";
@@ -23,7 +23,8 @@ interface TaskListPanelProps {
   baseFilters?: TaskFilters;
   initialStatus?: TaskStatus | null;
   initialOverdue?: boolean;
-  showAssigneeFilter?: boolean;
+  /** Filter by project (the projects the user can see). */
+  showProjectFilter?: boolean;
   showProject?: boolean;
   /** Which deadline the table shows and sorts by first. */
   deadline?: "dueDate" | "qaDueDate";
@@ -35,7 +36,7 @@ export function TaskListPanel({
   baseFilters = {},
   initialStatus = null,
   initialOverdue = false,
-  showAssigneeFilter = true,
+  showProjectFilter = true,
   showProject = false,
   deadline = "dueDate",
   emptyTitle = "No tasks match these filters.",
@@ -43,27 +44,32 @@ export function TaskListPanel({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<TaskStatus | null>(initialStatus);
   const [priority, setPriority] = useState<Priority | null>(null);
-  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [overdue, setOverdue] = useState(initialOverdue);
   const [sort, setSort] = useState<{ sortBy: TaskSortKey; sortOrder: "asc" | "desc" }>({ sortBy: deadline, sortOrder: "asc" });
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search, 300);
-  const users = useUserOptions({}, showAssigneeFilter);
+  const projects = useProjects({ sortBy: "name", sortOrder: "asc", pageSize: 200 });
+
+  // Bugs fold under their task, unless a filter is narrowing the list (then a matching bug
+  // shouldn't disappear because its task was filtered out).
+  const nestIssues = baseFilters.assigneeId === "me" && !debouncedSearch.trim() && !status && !priority && !overdue;
 
   const filters: TaskFilters = useMemo(
     () => ({
       ...baseFilters,
+      nestIssues: nestIssues || undefined,
       search: debouncedSearch.trim() || undefined,
       status: status ?? undefined,
       priority: priority ?? undefined,
-      assigneeId: assigneeId ?? baseFilters.assigneeId,
+      projectId: projectId ?? baseFilters.projectId,
       overdue: overdue || undefined,
       sortBy: sort.sortBy,
       sortOrder: sort.sortOrder,
       page,
       pageSize: DEFAULT_PAGE_SIZE,
     }),
-    [baseFilters, debouncedSearch, status, priority, assigneeId, overdue, sort, page],
+    [baseFilters, nestIssues, debouncedSearch, status, priority, projectId, overdue, sort, page],
   );
   const query = useTasks(filters);
 
@@ -71,7 +77,7 @@ export function TaskListPanel({
     setter(v);
     setPage(1);
   };
-  const hasFilters = Boolean(search || status || priority || assigneeId || overdue);
+  const hasFilters = Boolean(search || status || priority || projectId || overdue);
 
   return (
     <div className="space-y-3">
@@ -104,15 +110,15 @@ export function TaskListPanel({
           noneLabel="All priorities"
           options={PRIORITIES.map((p) => ({ value: p, label: PRIORITY_META[p].label }))}
         />
-        {showAssigneeFilter ? (
+        {showProjectFilter ? (
           <SelectField
-            id="filter-assignee"
-            aria-label="Filter by assignee"
-            className="w-44"
-            value={assigneeId}
-            onChange={reset(setAssigneeId)}
-            noneLabel="Anyone"
-            options={(users.data ?? []).map((u) => ({ value: u.id, label: u.name }))}
+            id="filter-project"
+            aria-label="Filter by project"
+            className="w-48"
+            value={projectId}
+            onChange={reset(setProjectId)}
+            noneLabel="All projects"
+            options={(projects.data?.items ?? []).map((p) => ({ value: p.id, label: p.name }))}
           />
         ) : null}
         <div className="flex items-center gap-2 px-1">
@@ -129,7 +135,7 @@ export function TaskListPanel({
               setSearch("");
               setStatus(null);
               setPriority(null);
-              setAssigneeId(null);
+              setProjectId(null);
               setOverdue(false);
               setPage(1);
             }}

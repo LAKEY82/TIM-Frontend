@@ -33,6 +33,10 @@ export interface TaskFilters extends QueryParams {
   includeQa?: boolean;
   /** "My bugs": issues I test or reported as QA. */
   qaBugs?: boolean;
+  /** The bugs QA reported on this task. */
+  issuesOf?: ID;
+  /** With assigneeId "me": bugs on my own tasks are listed under those tasks, not as rows. */
+  nestIssues?: boolean;
   search?: string;
   projectId?: ID;
   milestoneId?: ID;

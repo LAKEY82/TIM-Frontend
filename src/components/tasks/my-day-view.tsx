@@ -3,6 +3,7 @@
 import { addDays, subDays } from "date-fns";
 import { ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
 import { useMemo, useState } from "react";
+import { DayMeetings } from "@/components/meetings/day-meetings";
 import { PageHeader } from "@/components/shared/page-header";
 import { ListSkeleton } from "@/components/shared/skeletons";
 import { ErrorState } from "@/components/shared/states";
@@ -52,6 +53,7 @@ export function MyDayView() {
         <ErrorState error={query.error} title="Unable to load your day." onRetry={() => void query.refetch()} />
       ) : day ? (
         <div className="space-y-8">
+          <DayMeetings date={date} />
           {isToday ? <QaSetupSection tasks={day.qaSetup} /> : null}
           {day.qaQueue.length > 0 ? (
             <TaskSection id="myday-qa" title="Waiting for your QA" tasks={day.qaQueue} emptyTitle="Nothing waiting for QA." />

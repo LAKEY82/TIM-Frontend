@@ -228,6 +228,9 @@ export interface TaskSummary {
   subtaskCount?: number;
   completedSubtaskCount?: number;
   commentCount?: number;
+  /** Bugs QA reported on the task (for the workflow's QA stage, those under Bug fixing), and how many are open. */
+  issueCount?: number;
+  openIssueCount?: number;
   tags: string[];
 }
 
@@ -334,7 +337,8 @@ export type EntityType =
   | "USER"
   | "CLIENT"
   | "DEPARTMENT"
-  | "COMMENT";
+  | "COMMENT"
+  | "MEETING";
 
 export interface ActivityItem {
   id: ID;
@@ -359,6 +363,7 @@ export const NOTIFICATION_TYPES = [
   "DEADLINE_APPROACHING",
   "MENTION",
   "PROJECT_UPDATE",
+  "MEETING_INVITE",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -401,6 +406,8 @@ export interface WorkloadEntry {
   inReview: number;
   blocked: number;
   overdue: number;
+  /** In a project: counted on the work they do (developer) or the subtasks they test (QA). */
+  role?: "DEVELOPER" | "QA";
 }
 
 export interface DepartmentWorkload {
@@ -542,3 +549,25 @@ export interface Paginated<T> {
 }
 
 export type SortDirection = "asc" | "desc";
+
+// ---------------------------------------------------------------------------
+// Meetings
+// ---------------------------------------------------------------------------
+
+export const MEETING_PLATFORMS = ["ZOOM", "GOOGLE_MEET", "TEAMS", "OTHER"] as const;
+export type MeetingPlatform = (typeof MEETING_PLATFORMS)[number];
+
+export interface Meeting {
+  id: ID;
+  title: string;
+  description?: string | null;
+  platform: MeetingPlatform;
+  /** Join link. */
+  link?: string | null;
+  startAt: ISODateString;
+  endAt: ISODateString;
+  project?: { id: ID; name: string } | null;
+  organizer: UserSummary | null;
+  /** Invited people (the organizer isn't repeated here). */
+  participants: UserSummary[];
+}

@@ -190,6 +190,7 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   DEADLINE_APPROACHING: "Deadline approaching",
   MENTION: "Mention",
   PROJECT_UPDATE: "Project update",
+  MEETING_INVITE: "Meeting invite",
 };
 
 /** Statuses considered "done" for progress/overdue purposes. */

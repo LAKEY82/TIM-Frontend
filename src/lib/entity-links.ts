@@ -14,6 +14,8 @@ export function entityHref(type: EntityType | null | undefined, id: string | nul
       return `/clients/${id}`;
     case "DEPARTMENT":
       return `/teams/${id}`;
+    case "MEETING":
+      return `/meetings/${id}`;
     case "MILESTONE":
     case "COMMENT":
     default:

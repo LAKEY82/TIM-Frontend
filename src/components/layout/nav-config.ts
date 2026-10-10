@@ -15,6 +15,7 @@ import {
   Sun,
   Users,
   UsersRound,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 import type { Permission } from "@/lib/permissions";
@@ -45,6 +46,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "My Day", href: "/my-day", icon: Sun },
       { label: "My Tasks", href: "/tasks", icon: ListChecks, exact: true },
       { label: "Projects", href: "/projects", icon: FolderKanban },
+      { label: "Meetings", href: "/meetings", icon: Video },
       { label: "Calendar", href: "/calendar", icon: CalendarDays },
       { label: "Timeline", href: "/timeline", icon: GanttChart, permissions: ["timeline:read"] },
       { label: "Teams", href: "/teams", icon: UsersRound, permissions: ["teams:read"], match: ["/team/"] },

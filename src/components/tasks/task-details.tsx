@@ -148,16 +148,19 @@ export function TaskDetails({ taskId }: { taskId: ID }) {
             </TabsContent>
           </Tabs>
 
-          <SectionCard title="Attachments">
-            <AttachmentList
-              attachments={task.attachments}
-              onUpload={(file) => upload.mutate(file)}
-              uploading={upload.isPending}
-              onDelete={canManage || mine ? (id) => removeFile.mutate(id) : undefined}
-              deletingId={removeFile.isPending ? (removeFile.variables ?? null) : null}
-              onReject={(message) => toast.error(message)}
-            />
-          </SectionCard>
+          {/* A bug's files are part of its QA report above. */}
+          {task.qaIssue ? null : (
+            <SectionCard title="Attachments">
+              <AttachmentList
+                attachments={task.attachments}
+                onUpload={(file) => upload.mutate(file)}
+                uploading={upload.isPending}
+                onDelete={canManage || mine ? (id) => removeFile.mutate(id) : undefined}
+                deletingId={removeFile.isPending ? (removeFile.variables ?? null) : null}
+                onReject={(message) => toast.error(message)}
+              />
+            </SectionCard>
+          )}
         </div>
 
         <aside className="space-y-6">

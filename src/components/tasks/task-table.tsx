@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowUpDown, ListChecks } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Bug, ChevronDown, ChevronRight, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Fragment, useState } from "react";
 import { EmptyState } from "@/components/shared/states";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatHours } from "@/lib/format";
@@ -13,6 +14,7 @@ import { TaskAssignee } from "./task-assignee";
 import { TaskDueDate } from "./task-due-date";
 import { TaskPriorityBadge } from "./task-priority-badge";
 import { TaskStatusPicker } from "./inline-pickers";
+import { TaskIssuesList } from "./task-issues-list";
 
 export type TaskSortKey = NonNullable<TaskFilters["sortBy"]>;
 
@@ -74,6 +76,14 @@ export function TaskTable({
   emptyDescription,
 }: TaskTableProps) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   if (tasks.length === 0) return <EmptyState icon={ListChecks} title={emptyTitle} description={emptyDescription} />;
 
@@ -93,7 +103,23 @@ export function TaskTable({
         </TableHeader>
         <TableBody>
           {tasks.map((task) => (
-            <TaskRow key={task.id} task={task} showProject={showProject} deadline={deadline} onOpen={() => router.push(`/tasks/${task.id}`)} />
+            <Fragment key={task.id}>
+              <TaskRow
+                task={task}
+                showProject={showProject}
+                deadline={deadline}
+                onOpen={() => router.push(`/tasks/${task.id}`)}
+                expanded={expanded.has(task.id)}
+                onToggle={() => toggle(task.id)}
+              />
+              {expanded.has(task.id) ? (
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableCell colSpan={7} className="py-2 pl-10">
+                    <TaskIssuesList taskId={task.id} />
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </Fragment>
           ))}
         </TableBody>
       </Table>
@@ -106,19 +132,54 @@ export function TaskRow({
   showProject,
   deadline = "dueDate",
   onOpen,
+  expanded = false,
+  onToggle,
 }: {
   task: TaskSummary;
   showProject?: boolean;
   deadline?: "dueDate" | "qaDueDate";
   onOpen: () => void;
+  /** Whether the bugs QA reported on this task are shown under it. */
+  expanded?: boolean;
+  onToggle?: () => void;
 }) {
+  const issues = task.issueCount ?? 0;
+  const open = task.openIssueCount ?? 0;
   return (
     <TableRow className="cursor-pointer" onClick={onOpen}>
       <TableCell className="max-w-0">
-        <Link href={`/tasks/${task.id}`} className="block truncate font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
-          {task.title}
-        </Link>
-        {showProject && task.project ? <p className="truncate text-xs text-muted-foreground">{task.project.name}</p> : null}
+        <div className="flex min-w-0 items-start gap-1.5">
+          {issues && onToggle ? (
+            <button
+              type="button"
+              className="mt-0.5 shrink-0 rounded p-0.5 text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              aria-expanded={expanded}
+              aria-label={`${expanded ? "Hide" : "Show"} bugs for ${task.title}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+            >
+              {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+            </button>
+          ) : null}
+          <div className="min-w-0">
+            <Link href={`/tasks/${task.id}`} className="block truncate font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
+              {task.title}
+            </Link>
+            {(showProject && task.project) || issues ? (
+              <p className="flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground">
+                {showProject && task.project ? <span className="truncate">{task.project.name}</span> : null}
+                {issues ? (
+                  <span className={cn("inline-flex shrink-0 items-center gap-1", open ? "text-red-700 dark:text-red-400" : undefined)}>
+                    <Bug className="size-3" aria-hidden />
+                    {open ? `${open} of ${issues} bug${issues === 1 ? "" : "s"} open` : `${issues} bug${issues === 1 ? "" : "s"} fixed`}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+        </div>
       </TableCell>
       <TableCell>
         <TaskAssignee user={task.assignee} className="max-w-40" />

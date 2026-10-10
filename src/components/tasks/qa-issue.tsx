@@ -1,6 +1,6 @@
 "use client";
 
-import { Bug, Gauge, Lightbulb, MessageSquareWarning, Palette, ShieldAlert, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Bug, Gauge, Lightbulb, MessageSquareWarning, Palette, Paperclip, ShieldAlert, TriangleAlert, type LucideIcon } from "lucide-react";
 import { SectionCard } from "@/components/shared/section-card";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,7 @@ export function QaIssueBadge({ kind, className }: { kind: QaIssueKind; className
 /** The QA report on an issue subtask: what to do to see it, and what should happen instead. */
 export function QaIssueCard({ issue, attachments = [] }: { issue: QaIssue; attachments?: Attachment[] }) {
   const images = attachments.filter(isImageFile);
+  const files = attachments.filter((a) => !isImageFile(a));
   const steps = (issue.steps ?? "")
     .split("\n")
     .map((s) => s.replace(/^\s*(\d+[.)]|[-*•])\s*/, "").trim())
@@ -91,6 +92,26 @@ export function QaIssueCard({ issue, attachments = [] }: { issue: QaIssue; attac
                   <a href={img.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md border hover:ring-2 hover:ring-ring">
                     {/* eslint-disable-next-line @next/next/no-img-element -- user uploads on external storage */}
                     <img src={img.url} alt={img.fileName} className="aspect-video w-full object-cover" loading="lazy" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {files.length ? (
+          <div>
+            <h3 className="mb-1.5 text-xs font-medium text-muted-foreground">Files</h3>
+            <ul className="flex flex-wrap gap-2">
+              {files.map((f) => (
+                <li key={f.id}>
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                  >
+                    <Paperclip className="size-3.5 text-muted-foreground" aria-hidden />
+                    {f.fileName}
                   </a>
                 </li>
               ))}

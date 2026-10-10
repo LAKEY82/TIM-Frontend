@@ -2,6 +2,7 @@
  * Query key factory. Every key starts with its resource so a whole resource
  * can be invalidated with e.g. `queryKeys.tasks.all`.
  */
+import type { MeetingFilters } from "@/lib/services/meetings";
 import type { ActivityFilters } from "@/lib/services/misc";
 import type { ProjectFilters } from "@/lib/services/projects";
 import type { TaskFilters } from "@/lib/services/tasks";
@@ -69,6 +70,12 @@ export const queryKeys = {
   activity: {
     all: ["activity"] as const,
     list: (filters: ActivityFilters) => ["activity", "list", filters] as const,
+  },
+
+  meetings: {
+    all: ["meetings"] as const,
+    list: (filters: MeetingFilters) => ["meetings", "list", filters] as const,
+    detail: (id: ID) => ["meetings", "detail", id] as const,
   },
 
   clients: {

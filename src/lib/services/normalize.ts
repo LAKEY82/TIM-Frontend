@@ -121,7 +121,7 @@ export const toTaskType = (v: unknown): TaskType => oneOf(TASK_TYPES, v, "OTHER"
 export const toMilestoneStatus = (v: unknown): MilestoneStatus => oneOf(MILESTONE_STATUSES, v, "PENDING");
 export const toNotificationType = (v: unknown): NotificationType => oneOf(NOTIFICATION_TYPES, v, "PROJECT_UPDATE");
 
-const ENTITY_TYPES: readonly EntityType[] = ["PROJECT", "TASK", "MILESTONE", "USER", "CLIENT", "DEPARTMENT", "COMMENT"];
+const ENTITY_TYPES: readonly EntityType[] = ["PROJECT", "TASK", "MILESTONE", "USER", "CLIENT", "DEPARTMENT", "COMMENT", "MEETING"];
 export const toEntityType = (v: unknown): EntityType => oneOf(ENTITY_TYPES, v, "TASK");
 
 function countOf(obj: Raw, key: string): number | undefined {
@@ -324,6 +324,8 @@ export function toTaskSummary(value: unknown): TaskSummary {
         }).length,
     ),
     commentCount: num(pick(obj, "commentCount", "comment_count") ?? countOf(obj, "comments")),
+    issueCount: num(obj.issueCount),
+    openIssueCount: num(obj.openIssueCount),
     tags: toTags(obj.tags),
   };
 }
@@ -494,6 +496,7 @@ export function toWorkload(value: unknown): WorkloadEntry {
     inReview: num(pick(obj, "inReview", "in_review")),
     blocked: num(pick(obj, "blocked", "blockedTasks")),
     overdue: num(pick(obj, "overdue", "overdueTasks")),
+    role: obj.role === "QA" || obj.role === "DEVELOPER" ? obj.role : undefined,
   };
 }
 

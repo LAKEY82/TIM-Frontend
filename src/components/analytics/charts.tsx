@@ -233,7 +233,9 @@ export function DepartmentWorkloadChart({ data, ...rest }: BaseChartProps & { da
 // People workload (factual counts; never a "performance score")
 // ---------------------------------------------------------------------------
 
-export function WorkloadChart({ data, ...rest }: BaseChartProps & { data: WorkloadEntry[] }) {
+export function WorkloadChart({ data: entries, ...rest }: BaseChartProps & { data: WorkloadEntry[] }) {
+  // QA are counted on the subtasks they test, so say so next to their name.
+  const data = entries.map((e) => (e.role === "QA" ? { ...e, name: `${e.name} (QA)` } : e));
   const height = rest.height ?? Math.max(180, data.length * 40 + 30);
   return (
     <ChartCard
