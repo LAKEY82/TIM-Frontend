@@ -47,6 +47,8 @@ export function projectToForm(p: Project): ProjectFormValues {
     priority: p.priority,
     startDate: dateInput(p.startDate),
     deadline: dateInput(p.deadline),
+    githubLink: p.githubLink ?? "",
+    designLink: p.designLink ?? "",
     managerId: p.manager?.id ?? null,
     qaId: p.qa?.id ?? null,
     memberIds: p.members.map((m) => m.id),
@@ -235,6 +237,12 @@ function ProjectForm({ project, onDone }: { project?: Project; onDone: () => voi
         </FormField>
         <FormField id="project-hours" label="Estimated hours" error={e("estimatedHours")}>
           <Input id="project-hours" inputMode="decimal" aria-invalid={Boolean(e("estimatedHours"))} {...form.register("estimatedHours")} />
+        </FormField>
+        <FormField id="project-design-link" label="Design Link" error={e("designLink")}>
+          <Input id="project-design-link" type="url" aria-invalid={Boolean(e("designLink"))} {...form.register("designLink")} />
+        </FormField>
+        <FormField id="project-github-link" label="GitHub Link" error={e("githubLink")}>
+          <Input id="project-github-link" type="url" aria-invalid={Boolean(e("githubLink"))} {...form.register("githubLink")} />
         </FormField>
       </div>
 

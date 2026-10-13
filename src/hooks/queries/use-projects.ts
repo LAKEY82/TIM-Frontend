@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
 import { milestonesService, type MilestoneInput } from "@/lib/services/misc";
-import { projectsService, type ProjectFilters, type ProjectInput, type WorkflowPeople } from "@/lib/services/projects";
+import { projectsService, type ProjectFilters, type ProjectInput, type ProjectLinkInput, type WorkflowPeople } from "@/lib/services/projects";
 import type { ID } from "@/types/domain";
 
 export function useProjects(filters: ProjectFilters = {}) {
@@ -30,6 +30,33 @@ export function useProjectMembers(id: ID | undefined) {
 
 export function useProjectFiles(id: ID) {
   return useQuery({ queryKey: queryKeys.projects.files(id), queryFn: () => projectsService.files(id) });
+}
+
+export function useProjectLinks(id: ID) {
+  return useQuery({ queryKey: queryKeys.projects.links(id), queryFn: () => projectsService.links(id) });
+}
+
+export function useAddProjectLink(projectId: ID) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ProjectLinkInput) => projectsService.addLink(projectId, input),
+    meta: { silentError: true },
+    onSuccess: () => {
+      toast.success("Link added.");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.links(projectId) });
+    },
+  });
+}
+
+export function useRemoveProjectLink(projectId: ID) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (linkId: ID) => projectsService.removeLink(projectId, linkId),
+    onSuccess: () => {
+      toast.success("Link removed.");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.links(projectId) });
+    },
+  });
 }
 
 export function useCreateProject() {

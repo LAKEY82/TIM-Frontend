@@ -38,6 +38,7 @@ const STATIC_LABELS: Record<string, string> = {
   milestones: "Milestones",
   members: "Members",
   files: "Files",
+  links: "Links",
   activity: "Activity",
 };
 

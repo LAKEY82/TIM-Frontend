@@ -33,6 +33,7 @@ export const queryKeys = {
     detail: (id: ID) => ["projects", "detail", id] as const,
     members: (id: ID) => ["projects", "members", id] as const,
     files: (id: ID) => ["projects", "files", id] as const,
+    links: (id: ID) => ["projects", "links", id] as const,
   },
 
   tasks: {

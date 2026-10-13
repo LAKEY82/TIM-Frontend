@@ -107,6 +107,8 @@ export interface Project {
   members: UserSummary[];
   startDate?: ISODateString | null;
   deadline?: ISODateString | null;
+  designLink?: string | null;
+  githubLink?: string | null;
   /** 0 - 100 */
   progress: number;
   taskCount: number;
@@ -570,4 +572,21 @@ export interface Meeting {
   organizer: UserSummary | null;
   /** Invited people (the organizer isn't repeated here). */
   participants: UserSummary[];
+}
+
+// ---------------------------------------------------------------------------
+// Project links
+// ---------------------------------------------------------------------------
+
+/** What a project link points to, worked out from its URL. */
+export const PROJECT_LINK_KINDS = ["FIGMA", "GITHUB", "OTHER"] as const;
+export type ProjectLinkKind = (typeof PROJECT_LINK_KINDS)[number];
+
+export interface ProjectLink {
+  id: ID;
+  title: string;
+  url: string;
+  kind: ProjectLinkKind;
+  addedBy: UserSummary | null;
+  createdAt?: ISODateString | null;
 }

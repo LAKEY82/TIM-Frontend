@@ -1,11 +1,12 @@
 import { api, type QueryParams } from "@/lib/api";
-import { toAttachment, toList, toPaginated, toProject, toTaskSummary, toUserSummary } from "@/lib/services/normalize";
+import { optStr, pick, rec, str, toAttachment, toList, toPaginated, toProject, toTaskSummary, toUserSummary } from "@/lib/services/normalize";
 import type {
   Attachment,
   ID,
   Paginated,
   Priority,
   Project,
+  ProjectLink,
   ProjectStatus,
   ProjectType,
   SortDirection,
@@ -37,6 +38,8 @@ export interface ProjectInput {
   priority: Priority;
   startDate?: string | null;
   deadline?: string | null;
+  githubLink?: string | null;
+  designLink?: string | null;
   managerId?: ID | null;
   qaId?: ID | null;
   memberIds: ID[];
@@ -52,6 +55,24 @@ export interface WorkflowPeople {
   backendId?: ID | null;
   /** Defaults to the frontend developer, then the backend developer. */
   bugFixerId?: ID | null;
+}
+
+export interface ProjectLinkInput {
+  url: string;
+  /** Left empty, the API picks one from the URL (e.g. "owner/repo" for GitHub). */
+  title?: string;
+}
+
+function toProjectLink(value: unknown): ProjectLink {
+  const obj = rec(value);
+  return {
+    id: str(pick(obj, "id", "_id")),
+    title: str(obj.title),
+    url: str(obj.url),
+    kind: obj.kind === "FIGMA" || obj.kind === "GITHUB" ? obj.kind : "OTHER",
+    addedBy: toUserSummary(obj.addedBy),
+    createdAt: optStr(obj.createdAt),
+  };
 }
 
 export const projectsService = {
@@ -78,6 +99,11 @@ export const projectsService = {
     toList(await api.post(`/api/projects/${id}/workflow`, input), toTaskSummary),
 
   files: async (id: ID): Promise<Attachment[]> => toList(await api.get(`/api/projects/${id}/files`), toAttachment),
+  links: async (id: ID): Promise<ProjectLink[]> => toList(await api.get(`/api/projects/${id}/links`), toProjectLink),
+  addLink: async (id: ID, input: ProjectLinkInput): Promise<ProjectLink> => toProjectLink(await api.post(`/api/projects/${id}/links`, input)),
+  updateLink: async (id: ID, linkId: ID, input: Partial<ProjectLinkInput>): Promise<ProjectLink> =>
+    toProjectLink(await api.patch(`/api/projects/${id}/links/${linkId}`, input)),
+  removeLink: (id: ID, linkId: ID) => api.delete(`/api/projects/${id}/links/${linkId}`),
   uploadFile: async (id: ID, file: File) => {
     const form = new FormData();
     form.append("file", file);

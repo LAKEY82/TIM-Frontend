@@ -46,6 +46,7 @@ import { milestoneEvents, projectTimelineRows, taskEvents } from "@/lib/schedule
 import { MILESTONE_STATUSES, type ID, type MilestoneStatus } from "@/types/domain";
 import { ProjectProgress } from "./project-progress";
 import { MilestoneStatusBadge } from "./project-status-badge";
+import { upload } from "@testing-library/user-event/dist/cjs/setup/directApi.js";
 
 // ---------------------------------------------------------------------------
 // Milestones
@@ -285,7 +286,6 @@ export function ProjectMembers({ projectId }: { projectId: ID }) {
     </div>
   );
 }
-
 // ---------------------------------------------------------------------------
 // Files & activity
 // ---------------------------------------------------------------------------

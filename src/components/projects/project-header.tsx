@@ -30,6 +30,7 @@ export const PROJECT_TABS = [
   { segment: "timeline", label: "Timeline" },
   { segment: "members", label: "Members" },
   { segment: "files", label: "Files" },
+  { segment: "links", label: "Links" },
   { segment: "activity", label: "Activity" },
   { segment: "analytics", label: "Analytics" },
 ] as const;
